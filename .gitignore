@@ -1,0 +1,16 @@
+.DS_Store
+.idea/
+
+# Node
+node_modules/
+dist/
+
+# Logs
+*.log
+
+# Java
+target/
+*.class
+
+# Uni app build output
+unpackage/

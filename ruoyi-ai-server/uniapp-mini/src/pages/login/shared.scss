@@ -1,0 +1,150 @@
+.page {
+  min-height: 100vh;
+  padding: 32rpx 40rpx 0;
+  background: #0f0d1c;
+  color: #fff;
+}
+
+.nav-back {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 46rpx;
+  line-height: 48rpx;
+}
+
+.header {
+  margin-top: 8rpx;
+  text-align: center;
+}
+
+.page-title {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  margin-top: 96rpx;
+}
+
+.brand-icon {
+  color: #7e4dff;
+  font-size: 72rpx;
+  font-weight: 700;
+}
+
+.brand-text {
+  background: linear-gradient(90deg, #7d48ff, #d85ac6);
+  -webkit-background-clip: text;
+  color: transparent;
+  font-size: 72rpx;
+  font-weight: 700;
+}
+
+.welcome {
+  display: block;
+  margin-top: 28rpx;
+  text-align: center;
+  font-size: 36rpx;
+}
+
+.agree-row {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 42rpx;
+  align-items: flex-start;
+}
+
+.checkbox {
+  flex: 0 0 40rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid #6c6a79;
+  color: #0f0d1c;
+  text-align: center;
+  line-height: 36rpx;
+  background: #fff;
+}
+
+.checked {
+  color: #7a5cff;
+}
+
+.agree-text {
+  color: #c8c4db;
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.link {
+  color: #8f63ff;
+}
+
+.primary-btn {
+  height: 92rpx;
+  border-radius: 46rpx;
+  color: #fff;
+  border: none;
+  background: linear-gradient(90deg, #724dff, #b57dff);
+  font-size: 32rpx;
+  line-height: 92rpx;
+}
+
+.divider {
+  position: relative;
+  margin-top: 100rpx;
+  text-align: center;
+  color: #746d8f;
+  font-size: 26rpx;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 180rpx;
+  height: 1rpx;
+  background: #2b2740;
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
+}
+
+.other-actions {
+  display: flex;
+  justify-content: center;
+  gap: 120rpx;
+  margin-top: 70rpx;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #8e89a7;
+  font-size: 28rpx;
+}
+
+.circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92rpx;
+  height: 92rpx;
+  margin-bottom: 18rpx;
+  border: 2rpx solid #302b46;
+  border-radius: 50%;
+  font-size: 34rpx;
+}

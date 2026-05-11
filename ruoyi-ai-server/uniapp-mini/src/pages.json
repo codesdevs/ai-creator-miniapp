@@ -1,0 +1,98 @@
+{
+  "pages": [
+    {
+      "path": "pages/app/index",
+      "style": {
+        "navigationBarTitleText": "应用"
+      }
+    },
+    {
+      "path": "pages/assets/index",
+      "style": {
+        "navigationBarTitleText": "资产"
+      }
+    },
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/works/index",
+      "style": {
+        "navigationBarTitleText": "作品"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/create/image",
+      "style": {
+        "navigationBarTitleText": "图片创作"
+      }
+    },
+    {
+      "path": "pages/task/detail",
+      "style": {
+        "navigationBarTitleText": "任务详情"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/login/password",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/login/sms",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#9aa0c8",
+    "selectedColor": "#7a5cff",
+    "backgroundColor": "#121425",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/app/index",
+        "text": "应用"
+      },
+      {
+        "pagePath": "pages/assets/index",
+        "text": "资产"
+      },
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/works/index",
+        "text": "作品"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "AI Creator",
+    "navigationBarBackgroundColor": "#0f1020",
+    "backgroundColor": "#0f1020"
+  }
+}

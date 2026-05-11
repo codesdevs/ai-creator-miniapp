@@ -145,3 +145,9 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+wx:
+  miniapp:
+    enabled: false
+    appId:
+    secret:

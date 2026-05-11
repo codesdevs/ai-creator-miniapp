@@ -20,6 +20,36 @@ create table if not exists ai_c_model (
     unique key uk_ai_c_model_code (model_code)
 ) engine=innodb auto_increment=1 comment='AI模型配置表';
 
+create table if not exists ai_c_user (
+    user_id              bigint          not null auto_increment comment '用户ID',
+    user_no              varchar(32)     not null comment '用户编号',
+    nick_name            varchar(64)     not null comment '昵称',
+    avatar               varchar(255)    default '' comment '头像',
+    mobile               varchar(20)     default '' comment '手机号',
+    status               char(1)         default '0' comment '状态（0正常 1停用）',
+    invite_code          varchar(32)     default '' comment '邀请码',
+    inviter_user_id      bigint          default null comment '邀请人',
+    activate_status      char(1)         default '0' comment '激活状态（0未激活 1已激活）',
+    activate_time        datetime        default null comment '激活时间',
+    create_time          datetime        default current_timestamp comment '创建时间',
+    update_time          datetime        default current_timestamp comment '更新时间',
+    primary key (user_id),
+    unique key uk_ai_c_user_user_no (user_no),
+    unique key uk_ai_c_user_invite_code (invite_code)
+) engine=innodb auto_increment=1 comment='C端用户表';
+
+create table if not exists ai_c_user_auth (
+    auth_id              bigint          not null auto_increment comment '认证ID',
+    user_id              bigint          not null comment '用户ID',
+    auth_type            varchar(20)     not null comment '认证类型',
+    openid               varchar(64)     not null comment 'openid',
+    unionid              varchar(64)     default '' comment 'unionid',
+    session_key          varchar(128)    default '' comment 'sessionKey',
+    create_time          datetime        default current_timestamp comment '创建时间',
+    primary key (auth_id),
+    unique key uk_ai_c_user_auth_type_openid (auth_type, openid)
+) engine=innodb auto_increment=1 comment='C端用户认证表';
+
 create table if not exists ai_c_model_version (
     version_id      bigint          not null auto_increment comment '版本ID',
     model_id        bigint          not null comment '模型ID',
@@ -134,3 +164,13 @@ insert into ai_c_wallet (wallet_id, user_id, balance_power, freeze_power, total_
 values
     (1, 1, 1000, 0, 0, 0, 1000, sysdate())
 on duplicate key update balance_power = values(balance_power), total_give_power = values(total_give_power), update_time = sysdate();
+
+insert into ai_c_user (user_id, user_no, nick_name, avatar, mobile, status, invite_code, inviter_user_id, activate_status, activate_time, create_time, update_time)
+values
+    (1, 'U202605110001', '开发用户', '', '', '0', 'DEV00001', null, '0', null, sysdate(), sysdate())
+on duplicate key update nick_name = values(nick_name), update_time = sysdate();
+
+insert into ai_c_user_auth (auth_id, user_id, auth_type, openid, unionid, session_key, create_time)
+values
+    (1, 1, 'DEV', 'dev-user-1', '', '', sysdate())
+on duplicate key update user_id = values(user_id);

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiAppUserMapper">
+
+    <resultMap type="AiAppUser" id="AiAppUserResult">
+        <result property="userId" column="user_id"/>
+        <result property="userNo" column="user_no"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="avatar" column="avatar"/>
+        <result property="mobile" column="mobile"/>
+        <result property="status" column="status"/>
+        <result property="inviteCode" column="invite_code"/>
+        <result property="inviterUserId" column="inviter_user_id"/>
+        <result property="activateStatus" column="activate_status"/>
+        <result property="activateTime" column="activate_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="selectAiAppUserById" parameterType="Long" resultMap="AiAppUserResult">
+        select user_id, user_no, nick_name, avatar, mobile, status, invite_code, inviter_user_id,
+               activate_status, activate_time, create_time, update_time
+        from ai_c_user
+        where user_id = #{userId}
+    </select>
+
+    <insert id="insertAiAppUser" parameterType="AiAppUser" useGeneratedKeys="true" keyProperty="userId">
+        insert into ai_c_user
+        (user_no, nick_name, avatar, mobile, status, invite_code, inviter_user_id, activate_status, activate_time, create_time, update_time)
+        values
+        (#{userNo}, #{nickName}, #{avatar}, #{mobile}, #{status}, #{inviteCode}, #{inviterUserId}, #{activateStatus}, #{activateTime}, #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="updateAiAppUser" parameterType="AiAppUser">
+        update ai_c_user
+        set nick_name = #{nickName},
+            avatar = #{avatar},
+            mobile = #{mobile},
+            status = #{status},
+            invite_code = #{inviteCode},
+            inviter_user_id = #{inviterUserId},
+            activate_status = #{activateStatus},
+            activate_time = #{activateTime},
+            update_time = #{updateTime}
+        where user_id = #{userId}
+    </update>
+</mapper>

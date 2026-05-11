@@ -6,11 +6,11 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.system.domain.AiWallet;
 import com.ruoyi.system.domain.AiWalletFlow;
 import com.ruoyi.system.service.IAiWalletService;
+import com.ruoyi.framework.web.service.AppSecurityUtils;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -26,15 +26,17 @@ public class AppWalletController extends BaseController
     private IAiWalletService aiWalletService;
 
     @GetMapping("/info")
-    public AjaxResult info(@RequestParam(defaultValue = "1") Long userId)
+    public AjaxResult info()
     {
+        Long userId = AppSecurityUtils.getUserId();
         AiWallet wallet = aiWalletService.getOrCreateWallet(userId);
         return AjaxResult.success(wallet);
     }
 
     @GetMapping("/flowPage")
-    public TableDataInfo flowPage(@RequestParam(defaultValue = "1") Long userId, AiWalletFlow aiWalletFlow)
+    public TableDataInfo flowPage(AiWalletFlow aiWalletFlow)
     {
+        Long userId = AppSecurityUtils.getUserId();
         aiWalletFlow.setUserId(userId);
         startPage();
         List<AiWalletFlow> list = aiWalletService.selectAiWalletFlowList(aiWalletFlow);

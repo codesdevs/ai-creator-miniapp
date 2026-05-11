@@ -1,6 +1,7 @@
 package com.ruoyi.web.controller.app;
 
 import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.framework.web.service.AppSecurityUtils;
 import com.ruoyi.system.domain.AiTask;
 import com.ruoyi.system.service.IAiTaskService;
 import com.ruoyi.system.domain.vo.AppImageTaskSubmitBo;
@@ -31,6 +32,7 @@ public class AppTaskController
     @PostMapping("/submitImage")
     public AjaxResult submitImage(@Valid @RequestBody AppImageTaskSubmitBo bo)
     {
+        bo.setUserId(AppSecurityUtils.getUserId());
         AiTask task = aiTaskService.submitImageTask(bo);
         AjaxResult result = AjaxResult.success("任务创建成功");
         result.put("taskId", task.getTaskId());

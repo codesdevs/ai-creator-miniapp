@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiAppUserAuthMapper">
+
+    <resultMap type="AiAppUserAuth" id="AiAppUserAuthResult">
+        <result property="authId" column="auth_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="authType" column="auth_type"/>
+        <result property="openid" column="openid"/>
+        <result property="unionid" column="unionid"/>
+        <result property="sessionKey" column="session_key"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="selectAiAppUserAuthByAuthTypeAndOpenid" resultMap="AiAppUserAuthResult">
+        select auth_id, user_id, auth_type, openid, unionid, session_key, create_time
+        from ai_c_user_auth
+        where auth_type = #{param1} and openid = #{param2}
+        limit 1
+    </select>
+
+    <select id="selectAiAppUserAuthByUnionid" resultMap="AiAppUserAuthResult">
+        select auth_id, user_id, auth_type, openid, unionid, session_key, create_time
+        from ai_c_user_auth
+        where unionid = #{param1}
+        limit 1
+    </select>
+
+    <insert id="insertAiAppUserAuth" parameterType="AiAppUserAuth" useGeneratedKeys="true" keyProperty="authId">
+        insert into ai_c_user_auth (user_id, auth_type, openid, unionid, session_key, create_time)
+        values (#{userId}, #{authType}, #{openid}, #{unionid}, #{sessionKey}, #{createTime})
+    </insert>
+
+    <update id="updateAiAppUserAuth" parameterType="AiAppUserAuth">
+        update ai_c_user_auth
+        set user_id = #{userId},
+            auth_type = #{authType},
+            openid = #{openid},
+            unionid = #{unionid},
+            session_key = #{sessionKey}
+        where auth_id = #{authId}
+    </update>
+</mapper>

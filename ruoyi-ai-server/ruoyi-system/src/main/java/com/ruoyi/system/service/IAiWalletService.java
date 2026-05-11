@@ -13,9 +13,13 @@ public interface IAiWalletService
 {
     public AiWallet getOrCreateWallet(Long userId);
 
+    public AiWallet selectAiWalletByUserId(Long userId);
+
     public List<AiWalletFlow> selectAiWalletFlowList(AiWalletFlow aiWalletFlow);
 
     public void consumePower(Long userId, Integer powerNum, String bizType, Long bizId, String remark);
 
     public void grantPower(Long userId, Integer powerNum, String bizType, Long bizId, String remark);
+
+    public void rechargePower(Long userId, Integer powerNum, String bizType, Long bizId, String remark);
 }

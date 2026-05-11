@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiAppUserInviteMapper">
+
+    <resultMap type="AiAppUserInvite" id="AiAppUserInviteResult">
+        <result property="inviteId" column="invite_id"/>
+        <result property="inviterUserId" column="inviter_user_id"/>
+        <result property="inviteeUserId" column="invitee_user_id"/>
+        <result property="inviteCode" column="invite_code"/>
+        <result property="inviterUserNo" column="inviter_user_no"/>
+        <result property="inviterNickName" column="inviter_nick_name"/>
+        <result property="inviteeUserNo" column="invitee_user_no"/>
+        <result property="inviteeNickName" column="invitee_nick_name"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insertAiAppUserInvite" parameterType="AiAppUserInvite" useGeneratedKeys="true" keyProperty="inviteId">
+        insert into ai_c_user_invite (inviter_user_id, invitee_user_id, invite_code, create_time)
+        values (#{inviterUserId}, #{inviteeUserId}, #{inviteCode}, #{createTime})
+    </insert>
+
+    <select id="selectAiAppUserInviteList" parameterType="AiAppUserInvite" resultMap="AiAppUserInviteResult">
+        select i.invite_id, i.inviter_user_id, i.invitee_user_id, i.invite_code, i.create_time,
+               inviter.user_no as inviter_user_no, inviter.nick_name as inviter_nick_name,
+               invitee.user_no as invitee_user_no, invitee.nick_name as invitee_nick_name
+        from ai_c_user_invite i
+        left join ai_c_user inviter on inviter.user_id = i.inviter_user_id
+        left join ai_c_user invitee on invitee.user_id = i.invitee_user_id
+        <where>
+            <if test="inviterUserId != null">and i.inviter_user_id = #{inviterUserId}</if>
+            <if test="inviteeUserId != null">and i.invitee_user_id = #{inviteeUserId}</if>
+            <if test="inviteCode != null and inviteCode != ''">and i.invite_code like concat('%', #{inviteCode}, '%')</if>
+        </where>
+        order by i.invite_id desc
+    </select>
+</mapper>

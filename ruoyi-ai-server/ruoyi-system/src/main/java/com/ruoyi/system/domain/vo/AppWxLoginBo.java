@@ -16,6 +16,8 @@ public class AppWxLoginBo
 
     private String avatar;
 
+    private String inviteCode;
+
     public String getCode()
     {
         return code;
@@ -44,5 +46,15 @@ public class AppWxLoginBo
     public void setAvatar(String avatar)
     {
         this.avatar = avatar;
+    }
+
+    public String getInviteCode()
+    {
+        return inviteCode;
+    }
+
+    public void setInviteCode(String inviteCode)
+    {
+        this.inviteCode = inviteCode;
     }
 }

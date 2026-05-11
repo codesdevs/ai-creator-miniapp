@@ -25,17 +25,23 @@ create table if not exists ai_c_user (
     user_no              varchar(32)     not null comment '用户编号',
     nick_name            varchar(64)     not null comment '昵称',
     avatar               varchar(255)    default '' comment '头像',
+    email                varchar(64)     default '' comment '邮箱',
     mobile               varchar(20)     default '' comment '手机号',
     status               char(1)         default '0' comment '状态（0正常 1停用）',
     invite_code          varchar(32)     default '' comment '邀请码',
     inviter_user_id      bigint          default null comment '邀请人',
     activate_status      char(1)         default '0' comment '激活状态（0未激活 1已激活）',
     activate_time        datetime        default null comment '激活时间',
+    last_login_ip        varchar(128)    default '' comment '最近登录IP',
+    last_login_device    varchar(255)    default '' comment '最近登录设备',
+    last_login_time      datetime        default null comment '最近登录时间',
     create_time          datetime        default current_timestamp comment '创建时间',
     update_time          datetime        default current_timestamp comment '更新时间',
     primary key (user_id),
     unique key uk_ai_c_user_user_no (user_no),
-    unique key uk_ai_c_user_invite_code (invite_code)
+    unique key uk_ai_c_user_invite_code (invite_code),
+    unique key uk_ai_c_user_email (email),
+    unique key uk_ai_c_user_mobile (mobile)
 ) engine=innodb auto_increment=1 comment='C端用户表';
 
 create table if not exists ai_c_user_auth (
@@ -45,10 +51,27 @@ create table if not exists ai_c_user_auth (
     openid               varchar(64)     not null comment 'openid',
     unionid              varchar(64)     default '' comment 'unionid',
     session_key          varchar(128)    default '' comment 'sessionKey',
+    auth_nick_name       varchar(64)     default '' comment '三方昵称',
+    auth_avatar          varchar(255)    default '' comment '三方头像',
+    auth_mobile          varchar(20)     default '' comment '三方手机号',
+    remark               varchar(255)    default '' comment '备注',
     create_time          datetime        default current_timestamp comment '创建时间',
+    update_time          datetime        default current_timestamp comment '更新时间',
     primary key (auth_id),
     unique key uk_ai_c_user_auth_type_openid (auth_type, openid)
 ) engine=innodb auto_increment=1 comment='C端用户认证表';
+
+create table if not exists ai_c_user_invite (
+    invite_id             bigint          not null auto_increment comment '邀请记录ID',
+    inviter_user_id       bigint          not null comment '邀请人用户ID',
+    invitee_user_id       bigint          not null comment '被邀请人用户ID',
+    invite_code           varchar(32)     not null comment '邀请码',
+    create_time           datetime        default current_timestamp comment '创建时间',
+    primary key (invite_id),
+    unique key uk_ai_c_user_invite_invitee (invitee_user_id),
+    key idx_ai_c_user_invite_inviter (inviter_user_id),
+    key idx_ai_c_user_invite_code (invite_code)
+) engine=innodb auto_increment=1 comment='C端用户邀请关系表';
 
 create table if not exists ai_c_model_version (
     version_id      bigint          not null auto_increment comment '版本ID',
@@ -144,6 +167,70 @@ create table if not exists ai_c_wallet_flow (
     key idx_ai_c_wallet_flow_user_id (user_id)
 ) engine=innodb auto_increment=1 comment='AI钱包流水表';
 
+create table if not exists ai_c_recharge_package (
+    package_id            bigint          not null auto_increment comment '套餐ID',
+    package_name          varchar(64)     not null comment '套餐名称',
+    package_code          varchar(32)     not null comment '套餐编码',
+    power_num             int             default 0 comment '算力数量',
+    bonus_power_num       int             default 0 comment '赠送算力',
+    sale_price            decimal(10,2)   default 0.00 comment '销售金额',
+    original_price        decimal(10,2)   default 0.00 comment '原价金额',
+    sort                  int             default 0 comment '排序',
+    package_desc          varchar(255)    default '' comment '套餐说明',
+    status                char(1)         default '0' comment '状态（0正常 1停用）',
+    create_by             varchar(64)     default '' comment '创建者',
+    create_time           datetime        default current_timestamp comment '创建时间',
+    update_by             varchar(64)     default '' comment '更新者',
+    update_time           datetime        default null comment '更新时间',
+    remark                varchar(500)    default '' comment '备注',
+    primary key (package_id),
+    unique key uk_ai_c_recharge_package_code (package_code)
+) engine=innodb auto_increment=1 comment='充值套餐表';
+
+create table if not exists ai_c_pay_config (
+    pay_config_id         bigint          not null auto_increment comment '支付配置ID',
+    config_name           varchar(64)     not null comment '配置名称',
+    config_code           varchar(32)     not null comment '配置编码',
+    pay_channel           varchar(32)     not null comment '支付渠道',
+    mch_id                varchar(64)     default '' comment '商户号',
+    app_id                varchar(64)     default '' comment '应用ID',
+    notify_url            varchar(255)    default '' comment '回调地址',
+    status                char(1)         default '0' comment '状态（0正常 1停用）',
+    sort                  int             default 0 comment '排序',
+    create_by             varchar(64)     default '' comment '创建者',
+    create_time           datetime        default current_timestamp comment '创建时间',
+    update_by             varchar(64)     default '' comment '更新者',
+    update_time           datetime        default null comment '更新时间',
+    remark                varchar(500)    default '' comment '备注',
+    primary key (pay_config_id),
+    unique key uk_ai_c_pay_config_code (config_code)
+) engine=innodb auto_increment=1 comment='支付配置表';
+
+create table if not exists ai_c_order (
+    order_id              bigint          not null auto_increment comment '订单ID',
+    order_no              varchar(32)     not null comment '订单编号',
+    user_id               bigint          not null comment '用户ID',
+    package_id            bigint          default null comment '套餐ID',
+    package_name          varchar(64)     default '' comment '套餐名称',
+    pay_config_id         bigint          default null comment '支付配置ID',
+    pay_channel           varchar(32)     default '' comment '支付渠道',
+    power_num             int             default 0 comment '到账算力',
+    bonus_power_num       int             default 0 comment '赠送算力',
+    pay_amount            decimal(10,2)   default 0.00 comment '支付金额',
+    order_status          varchar(20)     default 'WAIT_PAY' comment '订单状态',
+    third_order_no        varchar(64)     default '' comment '第三方订单号',
+    pay_time              datetime        default null comment '支付时间',
+    create_by             varchar(64)     default '' comment '创建者',
+    create_time           datetime        default current_timestamp comment '创建时间',
+    update_by             varchar(64)     default '' comment '更新者',
+    update_time           datetime        default null comment '更新时间',
+    remark                varchar(500)    default '' comment '备注',
+    primary key (order_id),
+    unique key uk_ai_c_order_no (order_no),
+    key idx_ai_c_order_user_id (user_id),
+    key idx_ai_c_order_status (order_status)
+) engine=innodb auto_increment=1 comment='充值订单表';
+
 insert into ai_c_model (model_id, model_code, model_name, model_type, provider, intro, status, sort, create_by)
 values
     (1, 'jimeng', '即梦AI', 'IMAGE', 'BYTEDANCE', '字节跳动图片模型', '0', 1, 'admin'),
@@ -174,3 +261,18 @@ insert into ai_c_user_auth (auth_id, user_id, auth_type, openid, unionid, sessio
 values
     (1, 1, 'DEV', 'dev-user-1', '', '', sysdate())
 on duplicate key update user_id = values(user_id);
+
+insert into ai_c_recharge_package
+    (package_id, package_name, package_code, power_num, bonus_power_num, sale_price, original_price, sort, package_desc, status, create_by)
+values
+    (1, '新手体验包', 'STARTER_100', 100, 20, 9.90, 19.90, 1, '适合首次体验创作能力', '0', 'admin'),
+    (2, '进阶创作包', 'ADVANCE_500', 500, 100, 49.90, 69.90, 2, '适合日常图片创作使用', '0', 'admin'),
+    (3, '专业高频包', 'PRO_1200', 1200, 300, 99.90, 149.90, 3, '适合高频创作和团队测试', '0', 'admin')
+on duplicate key update package_name = values(package_name), power_num = values(power_num), bonus_power_num = values(bonus_power_num), sale_price = values(sale_price), status = values(status);
+
+insert into ai_c_pay_config
+    (pay_config_id, config_name, config_code, pay_channel, mch_id, app_id, notify_url, status, sort, create_by, remark)
+values
+    (1, '微信小程序支付', 'WX_MP', 'WECHAT_MP', '', '', '', '0', 1, 'admin', '微信小程序支付占位配置'),
+    (2, '支付宝H5支付', 'ALIPAY_H5', 'ALIPAY_H5', '', '', '', '1', 2, 'admin', '支付宝支付占位配置')
+on duplicate key update config_name = values(config_name), pay_channel = values(pay_channel), status = values(status), remark = values(remark);

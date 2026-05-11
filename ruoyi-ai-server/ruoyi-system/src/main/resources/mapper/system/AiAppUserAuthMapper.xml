@@ -11,26 +11,33 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="openid" column="openid"/>
         <result property="unionid" column="unionid"/>
         <result property="sessionKey" column="session_key"/>
+        <result property="authNickName" column="auth_nick_name"/>
+        <result property="authAvatar" column="auth_avatar"/>
+        <result property="authMobile" column="auth_mobile"/>
+        <result property="remark" column="remark"/>
         <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <select id="selectAiAppUserAuthByAuthTypeAndOpenid" resultMap="AiAppUserAuthResult">
-        select auth_id, user_id, auth_type, openid, unionid, session_key, create_time
+        select auth_id, user_id, auth_type, openid, unionid, session_key, auth_nick_name, auth_avatar, auth_mobile, remark, create_time, update_time
         from ai_c_user_auth
         where auth_type = #{param1} and openid = #{param2}
         limit 1
     </select>
 
     <select id="selectAiAppUserAuthByUnionid" resultMap="AiAppUserAuthResult">
-        select auth_id, user_id, auth_type, openid, unionid, session_key, create_time
+        select auth_id, user_id, auth_type, openid, unionid, session_key, auth_nick_name, auth_avatar, auth_mobile, remark, create_time, update_time
         from ai_c_user_auth
         where unionid = #{param1}
         limit 1
     </select>
 
     <insert id="insertAiAppUserAuth" parameterType="AiAppUserAuth" useGeneratedKeys="true" keyProperty="authId">
-        insert into ai_c_user_auth (user_id, auth_type, openid, unionid, session_key, create_time)
-        values (#{userId}, #{authType}, #{openid}, #{unionid}, #{sessionKey}, #{createTime})
+        insert into ai_c_user_auth
+        (user_id, auth_type, openid, unionid, session_key, auth_nick_name, auth_avatar, auth_mobile, remark, create_time, update_time)
+        values
+        (#{userId}, #{authType}, #{openid}, #{unionid}, #{sessionKey}, #{authNickName}, #{authAvatar}, #{authMobile}, #{remark}, #{createTime}, #{updateTime})
     </insert>
 
     <update id="updateAiAppUserAuth" parameterType="AiAppUserAuth">
@@ -39,7 +46,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             auth_type = #{authType},
             openid = #{openid},
             unionid = #{unionid},
-            session_key = #{sessionKey}
+            session_key = #{sessionKey},
+            auth_nick_name = #{authNickName},
+            auth_avatar = #{authAvatar},
+            auth_mobile = #{authMobile},
+            remark = #{remark},
+            update_time = #{updateTime}
         where auth_id = #{authId}
     </update>
 </mapper>

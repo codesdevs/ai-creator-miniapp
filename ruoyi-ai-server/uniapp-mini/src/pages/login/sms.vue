@@ -24,6 +24,8 @@
       <button class="code-btn" @tap="mockSendCode">获取验证码</button>
     </view>
 
+    <input v-model="form.inviteCode" class="invite-input" placeholder="请输入邀请码（选填）" />
+
     <button class="primary-btn" :disabled="submitting" @tap="handleLogin">
       {{ submitting ? '登录中...' : '登录' }}
     </button>
@@ -56,14 +58,17 @@
 
 <script setup>
 import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { devLogin } from '@/api/auth'
 import { setToken, setUser } from '@/utils/auth'
 
+const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
 const checked = ref(false)
 const submitting = ref(false)
 const form = ref({
   mobile: '',
-  code: ''
+  code: '',
+  inviteCode: ''
 })
 
 function goBack() {
@@ -75,11 +80,13 @@ function goBack() {
 }
 
 function goQuick() {
-  uni.redirectTo({ url: '/pages/login/index' })
+  persistInviteCode()
+  uni.redirectTo({ url: `/pages/login/index${buildInviteQuery()}` })
 }
 
 function goPassword() {
-  uni.redirectTo({ url: '/pages/login/password' })
+  persistInviteCode()
+  uni.redirectTo({ url: `/pages/login/password${buildInviteQuery()}` })
 }
 
 function mockSendCode() {
@@ -104,7 +111,8 @@ async function handleLogin() {
     const res = await devLogin({
       devKey: `sms:${form.value.mobile}`,
       nickName: `用户${form.value.mobile.slice(-4)}`,
-      avatar: ''
+      avatar: '',
+      inviteCode: form.value.inviteCode.trim()
     })
     setToken(res.token)
     setUser(res.user)
@@ -115,6 +123,24 @@ async function handleLogin() {
     submitting.value = false
   }
 }
+
+function buildInviteQuery() {
+  const code = form.value.inviteCode.trim()
+  return code ? `?inviteCode=${encodeURIComponent(code)}` : ''
+}
+
+function persistInviteCode() {
+  const code = form.value.inviteCode.trim()
+  if (code) {
+    uni.setStorageSync(INVITE_CODE_KEY, code)
+    return
+  }
+  uni.removeStorageSync(INVITE_CODE_KEY)
+}
+
+onLoad((options) => {
+  form.value.inviteCode = options?.inviteCode || uni.getStorageSync(INVITE_CODE_KEY) || ''
+})
 </script>
 
 <style lang="scss">
@@ -176,6 +202,18 @@ async function handleLogin() {
   color: #fff;
   font-size: 28rpx;
   line-height: 92rpx;
+}
+
+.invite-input {
+  width: 100%;
+  height: 92rpx;
+  box-sizing: border-box;
+  margin-top: 24rpx;
+  padding: 0 28rpx;
+  border-radius: 46rpx;
+  background: #252233;
+  color: #fff;
+  font-size: 28rpx;
 }
 
 .primary-btn {

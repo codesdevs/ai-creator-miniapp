@@ -26,6 +26,74 @@ select 2004, '算力流水', 2000, '4', 'wallet', 'ai/wallet/index', '', '', 1, 
 where not exists (select 1 from sys_menu where menu_id = 2004);
 
 insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2006, '充值套餐', 2000, '5', 'rechargePackage', 'ai/rechargePackage/index', '', '', 1, 0, 'C', '0', '0', 'ai:rechargePackage:list', 'shopping', 'admin', sysdate(), '', null, '充值套餐管理菜单'
+where not exists (select 1 from sys_menu where menu_id = 2006);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2010, '订单管理', 0, '6', 'orderManage', '', '', '', 1, 0, 'M', '0', '0', '', 'shopping', 'admin', sysdate(), '', null, '订单管理目录'
+where not exists (select 1 from sys_menu where menu_id = 2010);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2007, '充值订单', 2010, '1', 'order', 'ai/order/index', '', '', 1, 0, 'C', '0', '0', 'ai:order:list', 'order', 'admin', sysdate(), '', null, '充值订单管理菜单'
+where not exists (select 1 from sys_menu where menu_id = 2007);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2008, '支付配置', 2010, '2', 'payConfig', 'ai/payConfig/index', '', '', 1, 0, 'C', '0', '0', 'ai:payConfig:list', 'edit', 'admin', sysdate(), '', null, '支付配置管理菜单'
+where not exists (select 1 from sys_menu where menu_id = 2008);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2005, '会员列表', 0, '6', 'member', '', '', '', 1, 0, 'M', '0', '0', '', 'peoples', 'admin', sysdate(), '', null, '会员目录菜单'
+where not exists (select 1 from sys_menu where menu_id = 2005);
+
+update sys_menu
+set menu_name = '会员列表',
+    parent_id = 0,
+    order_num = '6',
+    path = 'member',
+    component = '',
+    menu_type = 'M',
+    perms = '',
+    icon = 'peoples',
+    remark = '会员目录菜单'
+where menu_id = 2005;
+
+update sys_menu
+set menu_name = '订单管理',
+    parent_id = 0,
+    order_num = '6',
+    path = 'orderManage',
+    component = '',
+    menu_type = 'M',
+    perms = '',
+    icon = 'shopping',
+    remark = '订单管理目录'
+where menu_id = 2010;
+
+update sys_menu
+set menu_name = '充值订单',
+    parent_id = 2010,
+    order_num = '1',
+    path = 'order',
+    component = 'ai/order/index',
+    menu_type = 'C',
+    perms = 'ai:order:list',
+    icon = 'order',
+    remark = '充值订单管理菜单'
+where menu_id = 2007;
+
+update sys_menu
+set menu_name = '支付配置',
+    parent_id = 2010,
+    order_num = '2',
+    path = 'payConfig',
+    component = 'ai/payConfig/index',
+    menu_type = 'C',
+    perms = 'ai:payConfig:list',
+    icon = 'edit',
+    remark = '支付配置管理菜单'
+where menu_id = 2008;
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
 select 2100, '模型查询', 2001, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:model:query', '#', 'admin', sysdate(), '', null, ''
 where not exists (select 1 from sys_menu where menu_id = 2100);
 
@@ -62,12 +130,84 @@ select 2300, '任务查询', 2003, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'a
 where not exists (select 1 from sys_menu where menu_id = 2300);
 
 insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2301, '任务处理', 2003, '2', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:task:handle', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2301);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
 select 2400, '流水查询', 2004, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:wallet:list', '#', 'admin', sysdate(), '', null, ''
 where not exists (select 1 from sys_menu where menu_id = 2400);
 
 insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
 select 2401, '赠送算力', 2004, '2', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:wallet:grant', '#', 'admin', sysdate(), '', null, ''
 where not exists (select 1 from sys_menu where menu_id = 2401);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2600, '套餐查询', 2006, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:rechargePackage:query', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2600);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2601, '套餐新增', 2006, '2', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:rechargePackage:add', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2601);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2602, '套餐修改', 2006, '3', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:rechargePackage:edit', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2602);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2700, '订单查询', 2007, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:order:query', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2700);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2701, '订单处理', 2007, '2', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:order:handle', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2701);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2800, '支付配置查询', 2008, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:payConfig:query', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2800);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2801, '支付配置新增', 2008, '2', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:payConfig:add', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2801);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2802, '支付配置修改', 2008, '3', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:payConfig:edit', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2802);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2500, '用户管理', 2005, '1', 'user', 'ai/user/index', '', '', 1, 0, 'C', '0', '0', 'ai:user:list', 'user', 'admin', sysdate(), '', null, '会员用户管理菜单'
+where not exists (select 1 from sys_menu where menu_id = 2500);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2501, '邀请管理', 2005, '2', 'userInvite', 'ai/userInvite/index', '', '', 1, 0, 'C', '0', '0', 'ai:userInvite:list', 'share', 'admin', sysdate(), '', null, '会员邀请关系管理菜单'
+where not exists (select 1 from sys_menu where menu_id = 2501);
+
+update sys_menu
+set menu_name = '用户管理',
+    parent_id = 2005,
+    order_num = '1',
+    path = 'user',
+    component = 'ai/user/index',
+    menu_type = 'C',
+    perms = 'ai:user:list',
+    icon = 'user',
+    remark = '会员用户管理菜单'
+where menu_id = 2500;
+
+update sys_menu
+set menu_name = '邀请管理',
+    parent_id = 2005,
+    order_num = '2',
+    path = 'userInvite',
+    component = 'ai/userInvite/index',
+    menu_type = 'C',
+    perms = 'ai:userInvite:list',
+    icon = 'share',
+    remark = '会员邀请关系管理菜单'
+where menu_id = 2501;
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2502, '邀请查询', 2501, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:userInvite:list', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2502);
 
 -- 给测试角色补菜单，管理员角色默认拥有全部菜单，无需关联
 insert into sys_role_menu (role_id, menu_id)
@@ -80,6 +220,16 @@ insert into sys_role_menu (role_id, menu_id)
 select 2, 2003 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2003);
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2004 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2004);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2006 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2006);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2010 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2010);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2007 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2007);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2008 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2008);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2005 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2005);
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2100 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2100);
 insert into sys_role_menu (role_id, menu_id)
@@ -99,9 +249,33 @@ select 2, 2203 where not exists (select 1 from sys_role_menu where role_id = 2 a
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2300 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2300);
 insert into sys_role_menu (role_id, menu_id)
+select 2, 2301 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2301);
+insert into sys_role_menu (role_id, menu_id)
 select 2, 2400 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2400);
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2401 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2401);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2600 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2600);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2601 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2601);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2602 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2602);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2700 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2700);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2701 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2701);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2800 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2800);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2801 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2801);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2802 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2802);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2500 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2500);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2501 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2501);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2502 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2502);
 
 -- ----------------------------
 -- 2、字典类型初始化

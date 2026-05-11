@@ -25,8 +25,19 @@ public class AiAppUserAuth implements Serializable
 
     private String sessionKey;
 
+    private String authNickName;
+
+    private String authAvatar;
+
+    private String authMobile;
+
+    private String remark;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date updateTime;
 
     public Long getAuthId()
     {
@@ -88,6 +99,46 @@ public class AiAppUserAuth implements Serializable
         this.sessionKey = sessionKey;
     }
 
+    public String getAuthNickName()
+    {
+        return authNickName;
+    }
+
+    public void setAuthNickName(String authNickName)
+    {
+        this.authNickName = authNickName;
+    }
+
+    public String getAuthAvatar()
+    {
+        return authAvatar;
+    }
+
+    public void setAuthAvatar(String authAvatar)
+    {
+        this.authAvatar = authAvatar;
+    }
+
+    public String getAuthMobile()
+    {
+        return authMobile;
+    }
+
+    public void setAuthMobile(String authMobile)
+    {
+        this.authMobile = authMobile;
+    }
+
+    public String getRemark()
+    {
+        return remark;
+    }
+
+    public void setRemark(String remark)
+    {
+        this.remark = remark;
+    }
+
     public Date getCreateTime()
     {
         return createTime;
@@ -96,5 +147,15 @@ public class AiAppUserAuth implements Serializable
     public void setCreateTime(Date createTime)
     {
         this.createTime = createTime;
+    }
+
+    public Date getUpdateTime()
+    {
+        return updateTime;
+    }
+
+    public void setUpdateTime(Date updateTime)
+    {
+        this.updateTime = updateTime;
     }
 }

@@ -1,5 +1,13 @@
 <template>
   <div class="app-container">
+    <el-alert
+      v-if="walletSummary.userId"
+      :title="`用户 ${walletSummary.userId} 当前余额 ${walletSummary.balancePower || 0}，累计消耗 ${walletSummary.totalConsumePower || 0}，累计赠送 ${walletSummary.totalGivePower || 0}`"
+      type="info"
+      :closable="false"
+      class="mb12"
+    />
+
     <el-form ref="queryRef" :model="queryParams" :inline="true" v-show="showSearch">
       <el-form-item label="用户ID" prop="userId">
         <el-input-number v-model="queryParams.userId" :min="1" controls-position="right" style="width: 180px" />
@@ -35,12 +43,16 @@
     <el-table v-loading="loading" :data="flowList">
       <el-table-column label="流水ID" align="center" prop="flowId" width="90" />
       <el-table-column label="用户ID" align="center" prop="userId" width="90" />
-      <el-table-column label="业务类型" align="center" prop="bizType" min-width="140" />
+      <el-table-column label="业务类型" align="center" prop="bizType" min-width="140">
+        <template #default="scope">
+          {{ formatBizType(scope.row.bizType) }}
+        </template>
+      </el-table-column>
       <el-table-column label="业务ID" align="center" prop="bizId" width="100" />
       <el-table-column label="变更类型" align="center" prop="changeType" width="100">
         <template #default="scope">
           <el-tag :type="scope.row.changeType === 'GRANT' ? 'success' : 'warning'">
-            {{ scope.row.changeType }}
+            {{ formatChangeType(scope.row.changeType) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -82,15 +94,18 @@
 </template>
 
 <script setup name="AiWallet">
-import { grantPower, listWalletFlow } from "@/api/ai/wallet"
+import { getWalletInfo, grantPower, listWalletFlow } from "@/api/ai/wallet"
+import { useRoute } from "vue-router"
 
 const { proxy } = getCurrentInstance()
+const route = useRoute()
 
 const flowList = ref([])
 const total = ref(0)
 const loading = ref(true)
 const showSearch = ref(true)
 const open = ref(false)
+const walletSummary = ref({})
 
 const data = reactive({
   queryParams: {
@@ -115,9 +130,16 @@ const { queryParams, grantForm, rules } = toRefs(data)
 
 function getList() {
   loading.value = true
-  listWalletFlow(queryParams.value).then(response => {
-    flowList.value = response.rows
-    total.value = response.total
+  Promise.all([
+    listWalletFlow(queryParams.value),
+    queryParams.value.userId ? getWalletInfo(queryParams.value.userId) : Promise.resolve({ data: {} })
+  ]).then(([flowResponse, walletResponse]) => {
+    flowList.value = flowResponse.rows
+    total.value = flowResponse.total
+    walletSummary.value = walletResponse.data || {}
+    walletSummary.value.userId = queryParams.value.userId
+    loading.value = false
+  }).catch(() => {
     loading.value = false
   })
 }
@@ -155,5 +177,23 @@ function submitGrant() {
   })
 }
 
+function formatBizType(bizType) {
+  if (bizType === "ADMIN_GRANT") return "后台赠送"
+  if (bizType === "TASK_CONSUME") return "任务消耗"
+  if (bizType === "TASK_REFUND") return "任务退款"
+  return bizType || "-"
+}
+
+function formatChangeType(changeType) {
+  if (changeType === "GRANT") return "赠送"
+  if (changeType === "CONSUME") return "消耗"
+  return changeType || "-"
+}
+
 getList()
+
+if (route.query.userId) {
+  queryParams.value.userId = Number(route.query.userId)
+  getList()
+}
 </script>

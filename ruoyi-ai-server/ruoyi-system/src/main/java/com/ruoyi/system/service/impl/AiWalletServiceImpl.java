@@ -45,6 +45,12 @@ public class AiWalletServiceImpl implements IAiWalletService
     }
 
     @Override
+    public AiWallet selectAiWalletByUserId(Long userId)
+    {
+        return aiWalletMapper.selectAiWalletByUserId(userId);
+    }
+
+    @Override
     public List<AiWalletFlow> selectAiWalletFlowList(AiWalletFlow aiWalletFlow)
     {
         return aiWalletFlowMapper.selectAiWalletFlowList(aiWalletFlow);
@@ -84,6 +90,23 @@ public class AiWalletServiceImpl implements IAiWalletService
         int afterBalance = beforeBalance + powerNum;
         wallet.setBalancePower(afterBalance);
         wallet.setTotalGivePower((wallet.getTotalGivePower() == null ? 0 : wallet.getTotalGivePower()) + powerNum);
+        aiWalletMapper.updateAiWallet(wallet);
+        insertFlow(userId, bizType, bizId, "GRANT", powerNum, beforeBalance, afterBalance, remark);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void rechargePower(Long userId, Integer powerNum, String bizType, Long bizId, String remark)
+    {
+        if (powerNum == null || powerNum <= 0)
+        {
+            throw new ServiceException("充值算力必须大于0");
+        }
+        AiWallet wallet = getOrCreateWallet(userId);
+        int beforeBalance = wallet.getBalancePower() == null ? 0 : wallet.getBalancePower();
+        int afterBalance = beforeBalance + powerNum;
+        wallet.setBalancePower(afterBalance);
+        wallet.setTotalRechargePower((wallet.getTotalRechargePower() == null ? 0 : wallet.getTotalRechargePower()) + powerNum);
         aiWalletMapper.updateAiWallet(wallet);
         insertFlow(userId, bizType, bizId, "GRANT", powerNum, beforeBalance, afterBalance, remark);
     }

@@ -16,6 +16,7 @@
 
     <input v-model="form.mobile" class="input" placeholder="请输入手机号" />
     <input v-model="form.password" password class="input" placeholder="请输入登录密码" />
+    <input v-model="form.inviteCode" class="input" placeholder="请输入邀请码（选填）" />
 
     <view class="link-row">
       <text class="forget" @tap="showForgetTip">忘记密码?</text>
@@ -53,14 +54,17 @@
 
 <script setup>
 import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { devLogin } from '@/api/auth'
 import { setToken, setUser } from '@/utils/auth'
 
+const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
 const checked = ref(false)
 const submitting = ref(false)
 const form = ref({
   mobile: '',
-  password: ''
+  password: '',
+  inviteCode: ''
 })
 
 function goBack() {
@@ -72,11 +76,13 @@ function goBack() {
 }
 
 function goQuick() {
-  uni.redirectTo({ url: '/pages/login/index' })
+  persistInviteCode()
+  uni.redirectTo({ url: `/pages/login/index${buildInviteQuery()}` })
 }
 
 function goSms() {
-  uni.redirectTo({ url: '/pages/login/sms' })
+  persistInviteCode()
+  uni.redirectTo({ url: `/pages/login/sms${buildInviteQuery()}` })
 }
 
 function showForgetTip() {
@@ -97,7 +103,8 @@ async function handleLogin() {
     const res = await devLogin({
       devKey: `pwd:${form.value.mobile}`,
       nickName: `用户${form.value.mobile.slice(-4)}`,
-      avatar: ''
+      avatar: '',
+      inviteCode: form.value.inviteCode.trim()
     })
     setToken(res.token)
     setUser(res.user)
@@ -108,6 +115,24 @@ async function handleLogin() {
     submitting.value = false
   }
 }
+
+function buildInviteQuery() {
+  const code = form.value.inviteCode.trim()
+  return code ? `?inviteCode=${encodeURIComponent(code)}` : ''
+}
+
+function persistInviteCode() {
+  const code = form.value.inviteCode.trim()
+  if (code) {
+    uni.setStorageSync(INVITE_CODE_KEY, code)
+    return
+  }
+  uni.removeStorageSync(INVITE_CODE_KEY)
+}
+
+onLoad((options) => {
+  form.value.inviteCode = options?.inviteCode || uni.getStorageSync(INVITE_CODE_KEY) || ''
+})
 </script>
 
 <style lang="scss">

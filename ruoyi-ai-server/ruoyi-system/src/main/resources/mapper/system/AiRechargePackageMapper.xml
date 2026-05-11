@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiRechargePackageMapper">
+    <resultMap type="AiRechargePackage" id="AiRechargePackageResult">
+        <result property="packageId" column="package_id"/>
+        <result property="packageName" column="package_name"/>
+        <result property="packageCode" column="package_code"/>
+        <result property="powerNum" column="power_num"/>
+        <result property="bonusPowerNum" column="bonus_power_num"/>
+        <result property="salePrice" column="sale_price"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="sort" column="sort"/>
+        <result property="packageDesc" column="package_desc"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectAiRechargePackageById" resultMap="AiRechargePackageResult">
+        select * from ai_c_recharge_package where package_id = #{packageId}
+    </select>
+
+    <select id="selectAiRechargePackageList" resultMap="AiRechargePackageResult">
+        select * from ai_c_recharge_package
+        <where>
+            <if test="packageName != null and packageName != ''">and package_name like concat('%', #{packageName}, '%')</if>
+            <if test="packageCode != null and packageCode != ''">and package_code like concat('%', #{packageCode}, '%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by sort asc, package_id desc
+    </select>
+
+    <insert id="insertAiRechargePackage" parameterType="AiRechargePackage" useGeneratedKeys="true" keyProperty="packageId">
+        insert into ai_c_recharge_package
+        (package_name, package_code, power_num, bonus_power_num, sale_price, original_price, sort, package_desc, status, create_by, create_time, remark)
+        values
+        (#{packageName}, #{packageCode}, #{powerNum}, #{bonusPowerNum}, #{salePrice}, #{originalPrice}, #{sort}, #{packageDesc}, #{status}, #{createBy}, #{createTime}, #{remark})
+    </insert>
+
+    <update id="updateAiRechargePackage" parameterType="AiRechargePackage">
+        update ai_c_recharge_package
+        set package_name = #{packageName},
+            package_code = #{packageCode},
+            power_num = #{powerNum},
+            bonus_power_num = #{bonusPowerNum},
+            sale_price = #{salePrice},
+            original_price = #{originalPrice},
+            sort = #{sort},
+            package_desc = #{packageDesc},
+            status = #{status},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+            remark = #{remark}
+        where package_id = #{packageId}
+    </update>
+</mapper>

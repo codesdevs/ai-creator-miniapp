@@ -32,4 +32,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         insert into ai_c_wallet_flow (user_id, biz_type, biz_id, change_type, power_num, before_balance, after_balance, remark, create_time)
         values (#{userId}, #{bizType}, #{bizId}, #{changeType}, #{powerNum}, #{beforeBalance}, #{afterBalance}, #{remark}, sysdate())
     </insert>
+
+    <select id="countAiWalletFlowByBiz" resultType="int">
+        select count(1)
+        from ai_c_wallet_flow
+        where biz_type = #{param1}
+          and biz_id = #{param2}
+          and change_type = #{param3}
+    </select>
 </mapper>

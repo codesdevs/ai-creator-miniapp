@@ -7,13 +7,17 @@ import cn.binarywang.wx.miniapp.config.impl.WxMaDefaultConfigImpl;
 import com.ruoyi.common.config.WxMaProperties;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
+import com.ruoyi.common.utils.ServletUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.common.utils.ip.IpUtils;
 import com.ruoyi.common.utils.uuid.IdUtils;
 import com.ruoyi.system.domain.AiAppUser;
 import com.ruoyi.system.domain.AiAppUserAuth;
+import com.ruoyi.system.domain.AiAppUserInvite;
 import com.ruoyi.system.domain.vo.AppDevLoginBo;
 import com.ruoyi.system.domain.vo.AppWxLoginBo;
 import com.ruoyi.system.mapper.AiAppUserAuthMapper;
+import com.ruoyi.system.mapper.AiAppUserInviteMapper;
 import com.ruoyi.system.mapper.AiAppUserMapper;
 import com.ruoyi.system.service.IAiWalletService;
 import com.ruoyi.system.service.IAiAppUserService;
@@ -21,6 +25,7 @@ import me.chanjar.weixin.common.error.WxErrorException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 /**
  * C端用户 服务层实现
@@ -37,6 +42,9 @@ public class AiAppUserServiceImpl implements IAiAppUserService
     private AiAppUserAuthMapper aiAppUserAuthMapper;
 
     @Autowired
+    private AiAppUserInviteMapper aiAppUserInviteMapper;
+
+    @Autowired
     private IAiWalletService aiWalletService;
 
     @Autowired
@@ -49,6 +57,12 @@ public class AiAppUserServiceImpl implements IAiAppUserService
     }
 
     @Override
+    public List<AiAppUser> selectAiAppUserList(AiAppUser aiAppUser)
+    {
+        return aiAppUserMapper.selectAiAppUserList(aiAppUser);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public AiAppUser devLogin(AppDevLoginBo bo)
     {
@@ -58,8 +72,8 @@ public class AiAppUserServiceImpl implements IAiAppUserService
             return refreshUserProfile(auth.getUserId(), bo.getNickName(), bo.getAvatar());
         }
 
-        AiAppUser user = createUser(StringUtils.defaultIfBlank(bo.getNickName(), "开发用户"), bo.getAvatar());
-        bindUserAuth(user.getUserId(), "DEV", bo.getDevKey(), null, null);
+        AiAppUser user = createUser(StringUtils.defaultIfBlank(bo.getNickName(), "开发用户"), bo.getAvatar(), bo.getInviteCode());
+        bindUserAuth(user.getUserId(), "DEV", bo.getDevKey(), null, null, bo.getNickName(), bo.getAvatar(), null, "DEV_LOGIN");
         return aiAppUserMapper.selectAiAppUserById(user.getUserId());
     }
 
@@ -93,12 +107,16 @@ public class AiAppUserServiceImpl implements IAiAppUserService
             auth.setOpenid(sessionResult.getOpenid());
             auth.setUnionid(sessionResult.getUnionid());
             auth.setSessionKey(sessionResult.getSessionKey());
+            auth.setAuthNickName(bo.getNickName());
+            auth.setAuthAvatar(bo.getAvatar());
+            auth.setUpdateTime(DateUtils.getNowDate());
             aiAppUserAuthMapper.updateAiAppUserAuth(auth);
             return refreshUserProfile(auth.getUserId(), bo.getNickName(), bo.getAvatar());
         }
 
-        AiAppUser user = createUser(StringUtils.defaultIfBlank(bo.getNickName(), "微信用户"), bo.getAvatar());
-        bindUserAuth(user.getUserId(), "WECHAT_OPENID", sessionResult.getOpenid(), sessionResult.getUnionid(), sessionResult.getSessionKey());
+        AiAppUser user = createUser(StringUtils.defaultIfBlank(bo.getNickName(), "微信用户"), bo.getAvatar(), bo.getInviteCode());
+        bindUserAuth(user.getUserId(), "WECHAT_OPENID", sessionResult.getOpenid(), sessionResult.getUnionid(),
+            sessionResult.getSessionKey(), bo.getNickName(), bo.getAvatar(), null, "WX_MINIAPP_LOGIN");
         return aiAppUserMapper.selectAiAppUserById(user.getUserId());
     }
 
@@ -134,29 +152,35 @@ public class AiAppUserServiceImpl implements IAiAppUserService
         {
             user.setAvatar(avatar);
         }
+        fillLoginAuditFields(user);
         user.setUpdateTime(DateUtils.getNowDate());
         aiAppUserMapper.updateAiAppUser(user);
         aiWalletService.getOrCreateWallet(userId);
         return aiAppUserMapper.selectAiAppUserById(userId);
     }
 
-    private AiAppUser createUser(String nickName, String avatar)
+    private AiAppUser createUser(String nickName, String avatar, String inviterCode)
     {
+        AiAppUser inviter = resolveInviter(inviterCode);
         AiAppUser user = new AiAppUser();
         user.setUserNo("U" + DateUtils.dateTimeNow() + IdUtils.fastSimpleUUID().substring(0, 6).toUpperCase());
         user.setNickName(nickName);
         user.setAvatar(StringUtils.defaultString(avatar));
         user.setStatus("0");
         user.setInviteCode(IdUtils.fastSimpleUUID().substring(0, 8).toUpperCase());
+        user.setInviterUserId(inviter == null ? null : inviter.getUserId());
         user.setActivateStatus("0");
+        fillLoginAuditFields(user);
         user.setCreateTime(DateUtils.getNowDate());
         user.setUpdateTime(DateUtils.getNowDate());
         aiAppUserMapper.insertAiAppUser(user);
+        saveInviteRelation(inviter, user);
         aiWalletService.getOrCreateWallet(user.getUserId());
         return user;
     }
 
-    private void bindUserAuth(Long userId, String authType, String openid, String unionid, String sessionKey)
+    private void bindUserAuth(Long userId, String authType, String openid, String unionid, String sessionKey,
+                              String authNickName, String authAvatar, String authMobile, String remark)
     {
         AiAppUserAuth userAuth = new AiAppUserAuth();
         userAuth.setUserId(userId);
@@ -164,7 +188,47 @@ public class AiAppUserServiceImpl implements IAiAppUserService
         userAuth.setOpenid(openid);
         userAuth.setUnionid(unionid);
         userAuth.setSessionKey(sessionKey);
+        userAuth.setAuthNickName(StringUtils.defaultString(authNickName));
+        userAuth.setAuthAvatar(StringUtils.defaultString(authAvatar));
+        userAuth.setAuthMobile(StringUtils.defaultString(authMobile));
+        userAuth.setRemark(StringUtils.defaultString(remark));
         userAuth.setCreateTime(DateUtils.getNowDate());
+        userAuth.setUpdateTime(DateUtils.getNowDate());
         aiAppUserAuthMapper.insertAiAppUserAuth(userAuth);
+    }
+
+    private void fillLoginAuditFields(AiAppUser user)
+    {
+        user.setLastLoginIp(StringUtils.substring(IpUtils.getIpAddr(), 0, 128));
+        user.setLastLoginDevice(StringUtils.substring(ServletUtils.getRequest().getHeader("User-Agent"), 0, 255));
+        user.setLastLoginTime(DateUtils.getNowDate());
+    }
+
+    private AiAppUser resolveInviter(String inviterCode)
+    {
+        if (StringUtils.isBlank(inviterCode))
+        {
+            return null;
+        }
+        AiAppUser inviter = aiAppUserMapper.selectAiAppUserByInviteCode(inviterCode.trim());
+        if (inviter == null)
+        {
+            throw new ServiceException("邀请码不存在");
+        }
+        return inviter;
+    }
+
+    private void saveInviteRelation(AiAppUser inviter, AiAppUser invitee)
+    {
+        if (inviter == null || invitee == null)
+        {
+            return;
+        }
+        AiAppUserInvite invite = new AiAppUserInvite();
+        invite.setInviterUserId(inviter.getUserId());
+        invite.setInviteeUserId(invitee.getUserId());
+        invite.setInviteCode(inviter.getInviteCode());
+        invite.setCreateTime(DateUtils.getNowDate());
+        aiAppUserInviteMapper.insertAiAppUserInvite(invite);
     }
 }

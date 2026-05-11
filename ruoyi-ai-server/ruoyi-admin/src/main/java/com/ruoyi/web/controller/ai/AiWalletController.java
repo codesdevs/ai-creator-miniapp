@@ -5,6 +5,7 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.system.domain.AiWallet;
 import com.ruoyi.system.domain.AiWalletFlow;
 import com.ruoyi.system.service.IAiWalletService;
 import java.util.List;
@@ -27,6 +28,14 @@ public class AiWalletController extends BaseController
 {
     @Autowired
     private IAiWalletService aiWalletService;
+
+    @PreAuthorize("@ss.hasPermi('ai:wallet:list')")
+    @GetMapping("/info")
+    public AjaxResult info(@RequestParam Long userId)
+    {
+        AiWallet wallet = aiWalletService.selectAiWalletByUserId(userId);
+        return success(wallet == null ? new AiWallet() : wallet);
+    }
 
     @PreAuthorize("@ss.hasPermi('ai:wallet:list')")
     @GetMapping("/flowList")

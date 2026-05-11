@@ -2,6 +2,7 @@ package com.ruoyi.system.service;
 
 import com.ruoyi.system.domain.AiTask;
 import com.ruoyi.system.domain.AiTaskResult;
+import com.ruoyi.system.domain.vo.AdminTaskHandleBo;
 import com.ruoyi.system.domain.vo.AppImageTaskSubmitBo;
 import java.util.List;
 
@@ -23,4 +24,6 @@ public interface IAiTaskService
     public AiTask selectUserTaskDetail(Long userId, Long taskId);
 
     public List<AiTask> selectUserTaskList(Long userId);
+
+    public AiTask adminHandleTask(AdminTaskHandleBo bo);
 }

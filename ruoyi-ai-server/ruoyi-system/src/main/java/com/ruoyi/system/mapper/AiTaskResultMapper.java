@@ -11,4 +11,6 @@ import java.util.List;
 public interface AiTaskResultMapper
 {
     public List<AiTaskResult> selectAiTaskResultListByTaskId(Long taskId);
+
+    public int insertAiTaskResult(AiTaskResult aiTaskResult);
 }

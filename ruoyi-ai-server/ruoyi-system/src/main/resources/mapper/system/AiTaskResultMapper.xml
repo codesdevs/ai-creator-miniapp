@@ -23,4 +23,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where task_id = #{taskId}
         order by seq_no asc, result_id asc
     </select>
+
+    <insert id="insertAiTaskResult" parameterType="AiTaskResult" useGeneratedKeys="true" keyProperty="resultId">
+        insert into ai_c_task_result
+        (task_id, result_type, file_url, cover_url, width, height, duration, seq_no, create_time)
+        values
+        (#{taskId}, #{resultType}, #{fileUrl}, #{coverUrl}, #{width}, #{height}, #{duration}, #{seqNo}, sysdate())
+    </insert>
 </mapper>

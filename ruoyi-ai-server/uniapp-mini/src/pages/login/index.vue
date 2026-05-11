@@ -13,6 +13,8 @@
 
     <text class="welcome">Hello,欢迎登录</text>
 
+    <input v-model="inviteCode" class="invite-input" placeholder="请输入邀请码（选填）" />
+
     <view class="agree-row" @tap="checked = !checked">
       <view :class="['checkbox', checked ? 'checked' : '']">{{ checked ? '✓' : '' }}</view>
       <view class="agree-text">
@@ -46,11 +48,14 @@
 
 <script setup>
 import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { devLogin, wxLogin } from '@/api/auth'
 import { getDevVisitorKey, setToken, setUser } from '@/utils/auth'
 
+const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
 const checked = ref(true)
 const submitting = ref(false)
+const inviteCode = ref('')
 
 function goBack() {
   if (getCurrentPages().length > 1) {
@@ -72,14 +77,16 @@ function goSms() {
   if (!ensureAgreement()) {
     return
   }
-  uni.navigateTo({ url: '/pages/login/sms' })
+  persistInviteCode()
+  uni.navigateTo({ url: `/pages/login/sms${buildInviteQuery()}` })
 }
 
 function goPassword() {
   if (!ensureAgreement()) {
     return
   }
-  uni.navigateTo({ url: '/pages/login/password' })
+  persistInviteCode()
+  uni.navigateTo({ url: `/pages/login/password${buildInviteQuery()}` })
 }
 
 function showRegisterTip() {
@@ -119,7 +126,8 @@ async function tryDevFallback() {
   const res = await devLogin({
     devKey: `wx:${devKey}`,
     nickName: getDefaultNickname(),
-    avatar: ''
+    avatar: '',
+    inviteCode: inviteCode.value.trim()
   })
   doLoginSuccess(res)
 }
@@ -134,7 +142,8 @@ async function handleQuickLogin() {
     const res = await wxLogin({
       code,
       nickName: getDefaultNickname(),
-      avatar: ''
+      avatar: '',
+      inviteCode: inviteCode.value.trim()
     })
     doLoginSuccess(res)
   } catch (error) {
@@ -148,6 +157,24 @@ async function handleQuickLogin() {
     submitting.value = false
   }
 }
+
+function buildInviteQuery() {
+  const code = inviteCode.value.trim()
+  return code ? `?inviteCode=${encodeURIComponent(code)}` : ''
+}
+
+function persistInviteCode() {
+  const code = inviteCode.value.trim()
+  if (code) {
+    uni.setStorageSync(INVITE_CODE_KEY, code)
+    return
+  }
+  uni.removeStorageSync(INVITE_CODE_KEY)
+}
+
+onLoad((options) => {
+  inviteCode.value = options?.inviteCode || uni.getStorageSync(INVITE_CODE_KEY) || ''
+})
 </script>
 
 <style lang="scss">
@@ -204,6 +231,18 @@ async function handleQuickLogin() {
   margin-top: 32rpx;
   text-align: center;
   font-size: 36rpx;
+}
+
+.invite-input {
+  width: 100%;
+  height: 92rpx;
+  box-sizing: border-box;
+  margin-top: 56rpx;
+  padding: 0 28rpx;
+  border-radius: 46rpx;
+  background: #252233;
+  color: #fff;
+  font-size: 28rpx;
 }
 
 .agree-row {

@@ -16,3 +16,12 @@ export function getTask(taskId) {
     method: 'get'
   })
 }
+
+// 人工处理任务
+export function handleTask(data) {
+  return request({
+    url: '/ai/task/handle',
+    method: 'post',
+    data: data
+  })
+}

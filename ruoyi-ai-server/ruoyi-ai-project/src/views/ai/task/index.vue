@@ -49,9 +49,10 @@
         </template>
       </el-table-column>
       <el-table-column label="提交时间" align="center" prop="submitTime" width="180" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="120">
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="180">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['ai:task:query']">详情</el-button>
+          <el-button link type="warning" icon="Edit" @click="handleOpenProcess(scope.row)" v-hasPermi="['ai:task:handle']">处理</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -95,16 +96,50 @@
         <el-table-column label="高" align="center" prop="height" width="80" />
       </el-table>
     </el-dialog>
+
+    <el-dialog title="人工处理任务" v-model="processOpen" width="520px" append-to-body>
+      <el-form ref="processRef" :model="processForm" :rules="rules" label-width="100px">
+        <el-form-item label="任务ID">
+          <el-input :model-value="processForm.taskId" disabled />
+        </el-form-item>
+        <el-form-item label="处理状态" prop="status">
+          <el-select v-model="processForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="待执行" value="PENDING" />
+            <el-option label="执行中" value="RUNNING" />
+            <el-option label="成功" value="SUCCESS" />
+            <el-option label="失败" value="FAIL" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="失败原因" prop="failReason" v-if="processForm.status === 'FAIL'">
+          <el-input v-model="processForm.failReason" type="textarea" :rows="3" placeholder="请输入失败原因" />
+        </el-form-item>
+        <el-form-item label="处理备注" prop="remark">
+          <el-input v-model="processForm.remark" type="textarea" :rows="3" placeholder="请输入处理备注" />
+        </el-form-item>
+        <el-form-item label="失败退款" v-if="processForm.status === 'FAIL'">
+          <el-switch v-model="processForm.refund" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="submitProcess">确 定</el-button>
+          <el-button @click="processOpen = false">取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="AiTask">
-import { getTask, listTask } from "@/api/ai/task"
+import { getTask, handleTask, listTask } from "@/api/ai/task"
+import { useRoute } from "vue-router"
 
 const { proxy } = getCurrentInstance()
+const route = useRoute()
 
 const taskList = ref([])
 const open = ref(false)
+const processOpen = ref(false)
 const loading = ref(true)
 const showSearch = ref(true)
 const total = ref(0)
@@ -118,13 +153,24 @@ const data = reactive({
   queryParams: {
     pageNum: 1,
     pageSize: 10,
+    userId: undefined,
     taskNo: undefined,
     taskType: undefined,
     status: undefined
+  },
+  processForm: {
+    taskId: undefined,
+    status: "RUNNING",
+    failReason: "",
+    remark: "",
+    refund: true
+  },
+  rules: {
+    status: [{ required: true, message: "处理状态不能为空", trigger: "change" }]
   }
 })
 
-const { queryParams } = toRefs(data)
+const { queryParams, processForm, rules } = toRefs(data)
 
 function getList() {
   loading.value = true
@@ -153,11 +199,46 @@ function handleDetail(row) {
   })
 }
 
+function handleOpenProcess(row) {
+  processForm.value = {
+    taskId: row.taskId,
+    status: row.status || "RUNNING",
+    failReason: row.failReason || "",
+    remark: row.remark || "",
+    refund: true
+  }
+  processOpen.value = true
+  proxy?.resetForm?.("processRef")
+}
+
+function submitProcess() {
+  proxy.$refs["processRef"].validate(valid => {
+    if (valid) {
+      handleTask(processForm.value).then(() => {
+        proxy.$modal.msgSuccess("处理成功")
+        processOpen.value = false
+        if (open.value && detail.task?.taskId === processForm.value.taskId) {
+          handleDetail({ taskId: processForm.value.taskId })
+        }
+        getList()
+      })
+    }
+  })
+}
+
 function statusTagType(status) {
   if (status === "SUCCESS") return "success"
   if (status === "FAIL") return "danger"
   if (status === "RUNNING") return "warning"
   return "info"
+}
+
+if (route.query.userId) {
+  queryParams.value.userId = Number(route.query.userId)
+}
+
+if (route.query.taskNo) {
+  queryParams.value.taskNo = route.query.taskNo
 }
 
 getList()

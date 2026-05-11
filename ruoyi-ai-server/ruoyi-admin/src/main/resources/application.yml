@@ -148,6 +148,6 @@ xss:
 
 wx:
   miniapp:
-    enabled: false
-    appId:
-    secret:
+    enabled: true
+    appId: wxa22026d321fb4a02
+    secret: 8488dad2744a7371423eb55f4c4e3e68

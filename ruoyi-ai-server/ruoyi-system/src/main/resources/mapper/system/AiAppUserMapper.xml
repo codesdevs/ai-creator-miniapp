@@ -9,40 +9,92 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="userNo" column="user_no"/>
         <result property="nickName" column="nick_name"/>
         <result property="avatar" column="avatar"/>
+        <result property="email" column="email"/>
         <result property="mobile" column="mobile"/>
         <result property="status" column="status"/>
         <result property="inviteCode" column="invite_code"/>
         <result property="inviterUserId" column="inviter_user_id"/>
         <result property="activateStatus" column="activate_status"/>
         <result property="activateTime" column="activate_time"/>
+        <result property="lastLoginIp" column="last_login_ip"/>
+        <result property="lastLoginDevice" column="last_login_device"/>
+        <result property="lastLoginTime" column="last_login_time"/>
+        <result property="authTypes" column="auth_types"/>
+        <result property="balancePower" column="balance_power"/>
+        <result property="totalConsumePower" column="total_consume_power"/>
+        <result property="totalGivePower" column="total_give_power"/>
+        <result property="taskCount" column="task_count"/>
+        <result property="inviteCount" column="invite_count"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <select id="selectAiAppUserById" parameterType="Long" resultMap="AiAppUserResult">
-        select user_id, user_no, nick_name, avatar, mobile, status, invite_code, inviter_user_id,
-               activate_status, activate_time, create_time, update_time
+        select user_id, user_no, nick_name, avatar, email, mobile, status, invite_code, inviter_user_id,
+               activate_status, activate_time, last_login_ip, last_login_device, last_login_time, create_time, update_time
         from ai_c_user
         where user_id = #{userId}
     </select>
 
+    <select id="selectAiAppUserByInviteCode" parameterType="String" resultMap="AiAppUserResult">
+        select user_id, user_no, nick_name, avatar, email, mobile, status, invite_code, inviter_user_id,
+               activate_status, activate_time, last_login_ip, last_login_device, last_login_time, create_time, update_time
+        from ai_c_user
+        where invite_code = #{inviteCode}
+        limit 1
+    </select>
+
+    <select id="selectAiAppUserList" parameterType="AiAppUser" resultMap="AiAppUserResult">
+        select u.user_id, u.user_no, u.nick_name, u.avatar, u.email, u.mobile, u.status, u.invite_code, u.inviter_user_id,
+               u.activate_status, u.activate_time, u.last_login_ip, u.last_login_device, u.last_login_time, u.create_time, u.update_time,
+               group_concat(distinct ua.auth_type order by ua.auth_type separator ',') as auth_types,
+               ifnull(w.balance_power, 0) as balance_power,
+               ifnull(w.total_consume_power, 0) as total_consume_power,
+               ifnull(w.total_give_power, 0) as total_give_power,
+               count(distinct t.task_id) as task_count,
+               count(distinct i.invitee_user_id) as invite_count
+        from ai_c_user u
+        left join ai_c_user_auth ua on ua.user_id = u.user_id
+        left join ai_c_wallet w on w.user_id = u.user_id
+        left join ai_c_task t on t.user_id = u.user_id
+        left join ai_c_user_invite i on i.inviter_user_id = u.user_id
+        <where>
+            <if test="userId != null">and u.user_id = #{userId}</if>
+            <if test="userNo != null and userNo != ''">and u.user_no like concat('%', #{userNo}, '%')</if>
+            <if test="nickName != null and nickName != ''">and u.nick_name like concat('%', #{nickName}, '%')</if>
+            <if test="email != null and email != ''">and u.email like concat('%', #{email}, '%')</if>
+            <if test="mobile != null and mobile != ''">and u.mobile like concat('%', #{mobile}, '%')</if>
+            <if test="status != null and status != ''">and u.status = #{status}</if>
+        </where>
+        group by u.user_id, u.user_no, u.nick_name, u.avatar, u.email, u.mobile, u.status, u.invite_code, u.inviter_user_id,
+                 u.activate_status, u.activate_time, u.last_login_ip, u.last_login_device, u.last_login_time, u.create_time, u.update_time,
+                 w.balance_power, w.total_consume_power, w.total_give_power
+        order by u.user_id desc
+    </select>
+
     <insert id="insertAiAppUser" parameterType="AiAppUser" useGeneratedKeys="true" keyProperty="userId">
         insert into ai_c_user
-        (user_no, nick_name, avatar, mobile, status, invite_code, inviter_user_id, activate_status, activate_time, create_time, update_time)
+        (user_no, nick_name, avatar, email, mobile, status, invite_code, inviter_user_id, activate_status, activate_time,
+         last_login_ip, last_login_device, last_login_time, create_time, update_time)
         values
-        (#{userNo}, #{nickName}, #{avatar}, #{mobile}, #{status}, #{inviteCode}, #{inviterUserId}, #{activateStatus}, #{activateTime}, #{createTime}, #{updateTime})
+        (#{userNo}, #{nickName}, #{avatar}, #{email}, #{mobile}, #{status}, #{inviteCode}, #{inviterUserId}, #{activateStatus}, #{activateTime},
+         #{lastLoginIp}, #{lastLoginDevice}, #{lastLoginTime}, #{createTime}, #{updateTime})
     </insert>
 
     <update id="updateAiAppUser" parameterType="AiAppUser">
         update ai_c_user
         set nick_name = #{nickName},
             avatar = #{avatar},
+            email = #{email},
             mobile = #{mobile},
             status = #{status},
             invite_code = #{inviteCode},
             inviter_user_id = #{inviterUserId},
             activate_status = #{activateStatus},
             activate_time = #{activateTime},
+            last_login_ip = #{lastLoginIp},
+            last_login_device = #{lastLoginDevice},
+            last_login_time = #{lastLoginTime},
             update_time = #{updateTime}
         where user_id = #{userId}
     </update>

@@ -117,6 +117,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="thirdTaskId != null">third_task_id = #{thirdTaskId},</if>
             <if test="failReason != null">fail_reason = #{failReason},</if>
             <if test="finishTime != null">finish_time = #{finishTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
             update_time = sysdate()
         </set>

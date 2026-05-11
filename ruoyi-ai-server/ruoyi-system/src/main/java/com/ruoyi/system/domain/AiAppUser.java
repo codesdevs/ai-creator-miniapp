@@ -21,6 +21,8 @@ public class AiAppUser implements Serializable
 
     private String avatar;
 
+    private String email;
+
     private String mobile;
 
     private String status;
@@ -31,8 +33,27 @@ public class AiAppUser implements Serializable
 
     private String activateStatus;
 
+    private String authTypes;
+
+    private Integer balancePower;
+
+    private Integer totalConsumePower;
+
+    private Integer totalGivePower;
+
+    private Long taskCount;
+
+    private Long inviteCount;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date activateTime;
+
+    private String lastLoginIp;
+
+    private String lastLoginDevice;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date lastLoginTime;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
@@ -78,6 +99,16 @@ public class AiAppUser implements Serializable
     public void setAvatar(String avatar)
     {
         this.avatar = avatar;
+    }
+
+    public String getEmail()
+    {
+        return email;
+    }
+
+    public void setEmail(String email)
+    {
+        this.email = email;
     }
 
     public String getMobile()
@@ -130,6 +161,66 @@ public class AiAppUser implements Serializable
         this.activateStatus = activateStatus;
     }
 
+    public String getAuthTypes()
+    {
+        return authTypes;
+    }
+
+    public void setAuthTypes(String authTypes)
+    {
+        this.authTypes = authTypes;
+    }
+
+    public Integer getBalancePower()
+    {
+        return balancePower;
+    }
+
+    public void setBalancePower(Integer balancePower)
+    {
+        this.balancePower = balancePower;
+    }
+
+    public Integer getTotalConsumePower()
+    {
+        return totalConsumePower;
+    }
+
+    public void setTotalConsumePower(Integer totalConsumePower)
+    {
+        this.totalConsumePower = totalConsumePower;
+    }
+
+    public Integer getTotalGivePower()
+    {
+        return totalGivePower;
+    }
+
+    public void setTotalGivePower(Integer totalGivePower)
+    {
+        this.totalGivePower = totalGivePower;
+    }
+
+    public Long getTaskCount()
+    {
+        return taskCount;
+    }
+
+    public void setTaskCount(Long taskCount)
+    {
+        this.taskCount = taskCount;
+    }
+
+    public Long getInviteCount()
+    {
+        return inviteCount;
+    }
+
+    public void setInviteCount(Long inviteCount)
+    {
+        this.inviteCount = inviteCount;
+    }
+
     public Date getActivateTime()
     {
         return activateTime;
@@ -138,6 +229,36 @@ public class AiAppUser implements Serializable
     public void setActivateTime(Date activateTime)
     {
         this.activateTime = activateTime;
+    }
+
+    public String getLastLoginIp()
+    {
+        return lastLoginIp;
+    }
+
+    public void setLastLoginIp(String lastLoginIp)
+    {
+        this.lastLoginIp = lastLoginIp;
+    }
+
+    public String getLastLoginDevice()
+    {
+        return lastLoginDevice;
+    }
+
+    public void setLastLoginDevice(String lastLoginDevice)
+    {
+        this.lastLoginDevice = lastLoginDevice;
+    }
+
+    public Date getLastLoginTime()
+    {
+        return lastLoginTime;
+    }
+
+    public void setLastLoginTime(Date lastLoginTime)
+    {
+        this.lastLoginTime = lastLoginTime;
     }
 
     public Date getCreateTime()

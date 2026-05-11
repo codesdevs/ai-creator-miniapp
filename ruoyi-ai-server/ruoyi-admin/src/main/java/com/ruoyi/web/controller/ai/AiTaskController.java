@@ -1,15 +1,21 @@
 package com.ruoyi.web.controller.ai;
 
+import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.system.domain.AiTask;
+import com.ruoyi.system.domain.vo.AdminTaskHandleBo;
 import com.ruoyi.system.service.IAiTaskService;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,5 +48,13 @@ public class AiTaskController extends BaseController
         result.put("task", aiTaskService.selectAiTaskById(taskId));
         result.put("resultList", aiTaskService.selectAiTaskResultListByTaskId(taskId));
         return result;
+    }
+
+    @PreAuthorize("@ss.hasPermi('ai:task:handle')")
+    @Log(title = "AI任务人工处理", businessType = BusinessType.UPDATE)
+    @PostMapping("/handle")
+    public AjaxResult handle(@Valid @RequestBody AdminTaskHandleBo bo)
+    {
+        return AjaxResult.success(aiTaskService.adminHandleTask(bo));
     }
 }

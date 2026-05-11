@@ -21,6 +21,9 @@ public class AppDevLoginBo
     @Size(max = 255, message = "头像地址长度不能超过255个字符")
     private String avatar;
 
+    @Size(max = 32, message = "邀请码长度不能超过32个字符")
+    private String inviteCode;
+
     public String getDevKey()
     {
         return devKey;
@@ -49,5 +52,15 @@ public class AppDevLoginBo
     public void setAvatar(String avatar)
     {
         this.avatar = avatar;
+    }
+
+    public String getInviteCode()
+    {
+        return inviteCode;
+    }
+
+    public void setInviteCode(String inviteCode)
+    {
+        this.inviteCode = inviteCode;
     }
 }

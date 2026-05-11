@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiOrderMapper">
+    <resultMap type="AiOrder" id="AiOrderResult">
+        <result property="orderId" column="order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="userId" column="user_id"/>
+        <result property="packageId" column="package_id"/>
+        <result property="packageName" column="package_name"/>
+        <result property="payConfigId" column="pay_config_id"/>
+        <result property="payChannel" column="pay_channel"/>
+        <result property="powerNum" column="power_num"/>
+        <result property="bonusPowerNum" column="bonus_power_num"/>
+        <result property="payAmount" column="pay_amount"/>
+        <result property="orderStatus" column="order_status"/>
+        <result property="thirdOrderNo" column="third_order_no"/>
+        <result property="payTime" column="pay_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="userNo" column="user_no"/>
+        <result property="nickName" column="nick_name"/>
+    </resultMap>
+
+    <select id="selectAiOrderById" resultMap="AiOrderResult">
+        select o.*, u.user_no, u.nick_name
+        from ai_c_order o
+        left join ai_c_user u on u.user_id = o.user_id
+        where o.order_id = #{orderId}
+    </select>
+
+    <select id="selectAiOrderList" resultMap="AiOrderResult">
+        select o.*, u.user_no, u.nick_name
+        from ai_c_order o
+        left join ai_c_user u on u.user_id = o.user_id
+        <where>
+            <if test="orderNo != null and orderNo != ''">and o.order_no like concat('%', #{orderNo}, '%')</if>
+            <if test="userId != null">and o.user_id = #{userId}</if>
+            <if test="orderStatus != null and orderStatus != ''">and o.order_status = #{orderStatus}</if>
+            <if test="payChannel != null and payChannel != ''">and o.pay_channel = #{payChannel}</if>
+        </where>
+        order by o.order_id desc
+    </select>
+
+    <insert id="insertAiOrder" parameterType="AiOrder" useGeneratedKeys="true" keyProperty="orderId">
+        insert into ai_c_order
+        (order_no, user_id, package_id, package_name, pay_config_id, pay_channel, power_num, bonus_power_num, pay_amount, order_status, third_order_no, pay_time, create_by, create_time, remark)
+        values
+        (#{orderNo}, #{userId}, #{packageId}, #{packageName}, #{payConfigId}, #{payChannel}, #{powerNum}, #{bonusPowerNum}, #{payAmount}, #{orderStatus}, #{thirdOrderNo}, #{payTime}, #{createBy}, #{createTime}, #{remark})
+    </insert>
+
+    <update id="updateAiOrder" parameterType="AiOrder">
+        update ai_c_order
+        set package_id = #{packageId},
+            package_name = #{packageName},
+            pay_config_id = #{payConfigId},
+            pay_channel = #{payChannel},
+            power_num = #{powerNum},
+            bonus_power_num = #{bonusPowerNum},
+            pay_amount = #{payAmount},
+            order_status = #{orderStatus},
+            third_order_no = #{thirdOrderNo},
+            pay_time = #{payTime},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+            remark = #{remark}
+        where order_id = #{orderId}
+    </update>
+</mapper>

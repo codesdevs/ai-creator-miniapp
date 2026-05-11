@@ -13,4 +13,6 @@ public interface AiWalletFlowMapper
     public List<AiWalletFlow> selectAiWalletFlowList(AiWalletFlow aiWalletFlow);
 
     public int insertAiWalletFlow(AiWalletFlow aiWalletFlow);
+
+    public int countAiWalletFlowByBiz(String bizType, Long bizId, String changeType);
 }

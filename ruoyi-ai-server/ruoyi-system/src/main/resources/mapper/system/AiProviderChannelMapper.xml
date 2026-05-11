@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiProviderChannelMapper">
+
+    <resultMap type="AiProviderChannel" id="AiProviderChannelResult">
+        <result property="channelId" column="channel_id"/>
+        <result property="providerId" column="provider_id"/>
+        <result property="providerName" column="provider_name"/>
+        <result property="channelName" column="channel_name"/>
+        <result property="channelCode" column="channel_code"/>
+        <result property="baseUrl" column="base_url"/>
+        <result property="apiKey" column="api_key"/>
+        <result property="apiSecret" column="api_secret"/>
+        <result property="proxyEnabled" column="proxy_enabled"/>
+        <result property="priority" column="priority"/>
+        <result property="weight" column="weight"/>
+        <result property="timeoutMs" column="timeout_ms"/>
+        <result property="maxConcurrency" column="max_concurrency"/>
+        <result property="rpmLimit" column="rpm_limit"/>
+        <result property="tpmLimit" column="tpm_limit"/>
+        <result property="isFallback" column="is_fallback"/>
+        <result property="healthStatus" column="health_status"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectAiProviderChannelVo">
+        select c.channel_id, c.provider_id, p.provider_name, c.channel_name, c.channel_code, c.base_url, c.api_key,
+               c.api_secret, c.proxy_enabled, c.priority, c.weight, c.timeout_ms, c.max_concurrency, c.rpm_limit,
+               c.tpm_limit, c.is_fallback, c.health_status, c.status, c.remark, c.create_by, c.create_time, c.update_by,
+               c.update_time
+        from ai_c_provider_channel c
+        left join ai_c_provider p on p.provider_id = c.provider_id
+    </sql>
+
+    <select id="selectAiProviderChannelById" resultMap="AiProviderChannelResult">
+        <include refid="selectAiProviderChannelVo"/>
+        where c.channel_id = #{channelId}
+    </select>
+
+    <select id="selectAiProviderChannelList" resultMap="AiProviderChannelResult">
+        <include refid="selectAiProviderChannelVo"/>
+        <where>
+            <if test="providerId != null">and c.provider_id = #{providerId}</if>
+            <if test="channelName != null and channelName != ''">and c.channel_name like concat('%', #{channelName}, '%')</if>
+            <if test="channelCode != null and channelCode != ''">and c.channel_code like concat('%', #{channelCode}, '%')</if>
+            <if test="healthStatus != null and healthStatus != ''">and c.health_status = #{healthStatus}</if>
+            <if test="status != null and status != ''">and c.status = #{status}</if>
+        </where>
+        order by c.priority asc, c.channel_id desc
+    </select>
+
+    <insert id="insertAiProviderChannel" parameterType="AiProviderChannel" useGeneratedKeys="true" keyProperty="channelId">
+        insert into ai_c_provider_channel
+        (provider_id, channel_name, channel_code, base_url, api_key, api_secret, proxy_enabled, priority, weight, timeout_ms,
+         max_concurrency, rpm_limit, tpm_limit, is_fallback, health_status, status, remark, create_by, create_time)
+        values
+        (#{providerId}, #{channelName}, #{channelCode}, #{baseUrl}, #{apiKey}, #{apiSecret}, #{proxyEnabled}, #{priority}, #{weight},
+         #{timeoutMs}, #{maxConcurrency}, #{rpmLimit}, #{tpmLimit}, #{isFallback}, #{healthStatus}, #{status}, #{remark}, #{createBy}, sysdate())
+    </insert>
+
+    <update id="updateAiProviderChannel" parameterType="AiProviderChannel">
+        update ai_c_provider_channel
+        set provider_id = #{providerId},
+            channel_name = #{channelName},
+            channel_code = #{channelCode},
+            base_url = #{baseUrl},
+            api_key = #{apiKey},
+            api_secret = #{apiSecret},
+            proxy_enabled = #{proxyEnabled},
+            priority = #{priority},
+            weight = #{weight},
+            timeout_ms = #{timeoutMs},
+            max_concurrency = #{maxConcurrency},
+            rpm_limit = #{rpmLimit},
+            tpm_limit = #{tpmLimit},
+            is_fallback = #{isFallback},
+            health_status = #{healthStatus},
+            status = #{status},
+            remark = #{remark},
+            update_by = #{updateBy},
+            update_time = sysdate()
+        where channel_id = #{channelId}
+    </update>
+
+    <delete id="deleteAiProviderChannelById">
+        delete from ai_c_provider_channel where channel_id = #{channelId}
+    </delete>
+
+    <delete id="deleteAiProviderChannelByIds">
+        delete from ai_c_provider_channel where channel_id in
+        <foreach item="channelId" collection="array" open="(" separator="," close=")">
+            #{channelId}
+        </foreach>
+    </delete>
+</mapper>

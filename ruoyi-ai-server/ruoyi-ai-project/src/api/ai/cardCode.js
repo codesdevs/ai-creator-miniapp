@@ -8,10 +8,25 @@ export function listCardCode(query) {
   })
 }
 
+export function getCardCode(cardCodeId) {
+  return request({
+    url: '/ai/cardCode/' + cardCodeId,
+    method: 'get'
+  })
+}
+
 export function addCardCode(data) {
   return request({
     url: '/ai/cardCode',
     method: 'post',
+    data
+  })
+}
+
+export function updateCardCode(data) {
+  return request({
+    url: '/ai/cardCode',
+    method: 'put',
     data
   })
 }

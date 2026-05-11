@@ -33,7 +33,7 @@
         >
           <text class="featured-type">{{ item.modelType === 'VIDEO' ? '视频模型' : '图片模型' }}</text>
           <text class="featured-name">{{ item.modelName }}</text>
-          <text class="featured-provider">{{ item.provider || '平台自定义模型' }}</text>
+          <text class="featured-provider">{{ item.providerName || item.provider || '平台自定义模型' }}</text>
           <text class="featured-intro">{{ item.intro || '暂无模型介绍' }}</text>
           <view class="featured-action">
             <text>进入创作</text>

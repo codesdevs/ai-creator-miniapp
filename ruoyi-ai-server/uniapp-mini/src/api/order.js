@@ -6,6 +6,12 @@ export function getRechargePackageList() {
   })
 }
 
+export function getPayConfigList() {
+  return request({
+    url: '/app/order/payConfigList'
+  })
+}
+
 export function submitRechargeOrder(data) {
   return request({
     url: '/app/order/submitRecharge',
@@ -17,5 +23,18 @@ export function submitRechargeOrder(data) {
 export function getMyRechargeOrderList() {
   return request({
     url: '/app/order/myRechargeList'
+  })
+}
+
+export function getRechargeOrderDetail(orderId) {
+  return request({
+    url: `/app/order/${orderId}`
+  })
+}
+
+export function cancelRechargeOrder(orderId) {
+  return request({
+    url: `/app/order/${orderId}`,
+    method: 'DELETE'
   })
 }

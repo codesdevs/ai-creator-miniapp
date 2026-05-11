@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * AI 钱包管理
+ * 会员钱包记录
  *
  * @author codex
  */

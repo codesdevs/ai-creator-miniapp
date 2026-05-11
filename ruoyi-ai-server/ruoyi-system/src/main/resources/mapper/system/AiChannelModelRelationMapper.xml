@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiChannelModelRelationMapper">
+
+    <resultMap type="AiChannelModelRelation" id="AiChannelModelRelationResult">
+        <result property="relationId" column="relation_id"/>
+        <result property="channelId" column="channel_id"/>
+        <result property="providerName" column="provider_name"/>
+        <result property="channelName" column="channel_name"/>
+        <result property="modelVersionId" column="model_version_id"/>
+        <result property="modelId" column="model_id"/>
+        <result property="modelName" column="model_name"/>
+        <result property="versionName" column="version_name"/>
+        <result property="apiModelName" column="api_model_name"/>
+        <result property="remoteModelName" column="remote_model_name"/>
+        <result property="enabled" column="enabled"/>
+        <result property="priceRatio" column="price_ratio"/>
+        <result property="priority" column="priority"/>
+        <result property="weight" column="weight"/>
+        <result property="maxQps" column="max_qps"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectAiChannelModelRelationVo">
+        select r.relation_id, r.channel_id, p.provider_name, c.channel_name, r.model_version_id, v.model_id, m.model_name,
+               v.version_name, v.api_model_name, r.remote_model_name, r.enabled, r.price_ratio, r.priority, r.weight,
+               r.max_qps, r.remark, r.create_by, r.create_time, r.update_by, r.update_time
+        from ai_c_channel_model_relation r
+        left join ai_c_provider_channel c on c.channel_id = r.channel_id
+        left join ai_c_provider p on p.provider_id = c.provider_id
+        left join ai_c_model_version v on v.version_id = r.model_version_id
+        left join ai_c_model m on m.model_id = v.model_id
+    </sql>
+
+    <select id="selectAiChannelModelRelationById" resultMap="AiChannelModelRelationResult">
+        <include refid="selectAiChannelModelRelationVo"/>
+        where r.relation_id = #{relationId}
+    </select>
+
+    <select id="selectAiChannelModelRelationList" resultMap="AiChannelModelRelationResult">
+        <include refid="selectAiChannelModelRelationVo"/>
+        <where>
+            <if test="channelId != null">and r.channel_id = #{channelId}</if>
+            <if test="modelVersionId != null">and r.model_version_id = #{modelVersionId}</if>
+            <if test="modelId != null">and v.model_id = #{modelId}</if>
+            <if test="remoteModelName != null and remoteModelName != ''">and r.remote_model_name like concat('%', #{remoteModelName}, '%')</if>
+            <if test="enabled != null and enabled != ''">and r.enabled = #{enabled}</if>
+        </where>
+        order by r.priority asc, r.weight desc, r.relation_id desc
+    </select>
+
+    <insert id="insertAiChannelModelRelation" parameterType="AiChannelModelRelation" useGeneratedKeys="true" keyProperty="relationId">
+        insert into ai_c_channel_model_relation
+        (channel_id, model_version_id, remote_model_name, enabled, price_ratio, priority, weight, max_qps, remark, create_by, create_time)
+        values
+        (#{channelId}, #{modelVersionId}, #{remoteModelName}, #{enabled}, #{priceRatio}, #{priority}, #{weight}, #{maxQps}, #{remark}, #{createBy}, sysdate())
+    </insert>
+
+    <update id="updateAiChannelModelRelation" parameterType="AiChannelModelRelation">
+        update ai_c_channel_model_relation
+        set channel_id = #{channelId},
+            model_version_id = #{modelVersionId},
+            remote_model_name = #{remoteModelName},
+            enabled = #{enabled},
+            price_ratio = #{priceRatio},
+            priority = #{priority},
+            weight = #{weight},
+            max_qps = #{maxQps},
+            remark = #{remark},
+            update_by = #{updateBy},
+            update_time = sysdate()
+        where relation_id = #{relationId}
+    </update>
+
+    <delete id="deleteAiChannelModelRelationById">
+        delete from ai_c_channel_model_relation where relation_id = #{relationId}
+    </delete>
+
+    <delete id="deleteAiChannelModelRelationByIds">
+        delete from ai_c_channel_model_relation where relation_id in
+        <foreach item="relationId" collection="array" open="(" separator="," close=")">
+            #{relationId}
+        </foreach>
+    </delete>
+</mapper>

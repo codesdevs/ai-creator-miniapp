@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiProviderMapper">
+
+    <resultMap type="AiProvider" id="AiProviderResult">
+        <result property="providerId" column="provider_id"/>
+        <result property="providerName" column="provider_name"/>
+        <result property="providerCode" column="provider_code"/>
+        <result property="providerType" column="provider_type"/>
+        <result property="icon" column="icon"/>
+        <result property="website" column="website"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectAiProviderVo">
+        select provider_id, provider_name, provider_code, provider_type, icon, website, status, remark,
+               create_by, create_time, update_by, update_time
+        from ai_c_provider
+    </sql>
+
+    <select id="selectAiProviderById" resultMap="AiProviderResult">
+        <include refid="selectAiProviderVo"/>
+        where provider_id = #{providerId}
+    </select>
+
+    <select id="selectAiProviderList" resultMap="AiProviderResult">
+        <include refid="selectAiProviderVo"/>
+        <where>
+            <if test="providerName != null and providerName != ''">and provider_name like concat('%', #{providerName}, '%')</if>
+            <if test="providerCode != null and providerCode != ''">and provider_code like concat('%', #{providerCode}, '%')</if>
+            <if test="providerType != null and providerType != ''">and provider_type = #{providerType}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by provider_id desc
+    </select>
+
+    <insert id="insertAiProvider" parameterType="AiProvider" useGeneratedKeys="true" keyProperty="providerId">
+        insert into ai_c_provider
+        (provider_name, provider_code, provider_type, icon, website, status, remark, create_by, create_time)
+        values
+        (#{providerName}, #{providerCode}, #{providerType}, #{icon}, #{website}, #{status}, #{remark}, #{createBy}, sysdate())
+    </insert>
+
+    <update id="updateAiProvider" parameterType="AiProvider">
+        update ai_c_provider
+        set provider_name = #{providerName},
+            provider_code = #{providerCode},
+            provider_type = #{providerType},
+            icon = #{icon},
+            website = #{website},
+            status = #{status},
+            remark = #{remark},
+            update_by = #{updateBy},
+            update_time = sysdate()
+        where provider_id = #{providerId}
+    </update>
+
+    <delete id="deleteAiProviderById">
+        delete from ai_c_provider where provider_id = #{providerId}
+    </delete>
+
+    <delete id="deleteAiProviderByIds">
+        delete from ai_c_provider where provider_id in
+        <foreach item="providerId" collection="array" open="(" separator="," close=")">
+            #{providerId}
+        </foreach>
+    </delete>
+</mapper>

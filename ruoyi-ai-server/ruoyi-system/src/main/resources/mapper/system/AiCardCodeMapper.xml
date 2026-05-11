@@ -30,6 +30,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where c.card_code_id = #{cardCodeId}
     </select>
 
+    <select id="selectAiCardCodeByCode" resultMap="AiCardCodeResult">
+        select c.*, u.user_no, u.nick_name
+        from ai_c_card_code c
+        left join ai_c_user u on u.user_id = c.used_user_id
+        where c.card_code = #{cardCode}
+    </select>
+
     <select id="selectAiCardCodeList" resultMap="AiCardCodeResult">
         select c.*, u.user_no, u.nick_name
         from ai_c_card_code c
@@ -58,6 +65,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             (#{item.packageId}, #{item.packageName}, #{item.cardCode}, #{item.powerNum}, #{item.bonusPowerNum}, #{item.status}, #{item.createTime}, #{item.remark})
         </foreach>
     </insert>
+
+    <update id="updateAiCardCode" parameterType="AiCardCode">
+        update ai_c_card_code
+        set package_id = #{packageId},
+            package_name = #{packageName},
+            card_code = #{cardCode},
+            power_num = #{powerNum},
+            bonus_power_num = #{bonusPowerNum},
+            status = #{status},
+            used_user_id = #{usedUserId},
+            order_id = #{orderId},
+            used_time = #{usedTime},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+            remark = #{remark}
+        where card_code_id = #{cardCodeId}
+    </update>
 
     <delete id="deleteAiCardCodeByIds">
         delete from ai_c_card_code where card_code_id in

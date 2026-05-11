@@ -25,5 +25,7 @@ public interface IAiTaskService
 
     public List<AiTask> selectUserTaskList(Long userId);
 
+    public boolean hasTaskRefunded(Long taskId);
+
     public AiTask adminHandleTask(AdminTaskHandleBo bo);
 }

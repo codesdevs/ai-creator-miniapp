@@ -26,6 +26,11 @@
           <el-option label="视频" value="VIDEO" />
         </el-select>
       </el-form-item>
+      <el-form-item label="官方提供商" prop="officialProviderId">
+        <el-select v-model="queryParams.officialProviderId" placeholder="请选择提供商" clearable filterable style="width: 200px">
+          <el-option v-for="item in providerOptions" :key="item.providerId" :label="item.providerName" :value="item.providerId" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择状态" clearable style="width: 200px">
           <el-option label="正常" value="0" />
@@ -57,7 +62,10 @@
       <el-table-column label="模型名称" align="center" prop="modelName" min-width="140" />
       <el-table-column label="模型编码" align="center" prop="modelCode" min-width="140" />
       <el-table-column label="类型" align="center" prop="modelType" width="90" />
-      <el-table-column label="服务商" align="center" prop="provider" min-width="120" />
+      <el-table-column label="官方提供商" align="center" min-width="120">
+        <template #default="scope">{{ scope.row.providerName || scope.row.provider || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="能力标签" align="center" prop="capabilities" min-width="180" :show-overflow-tooltip="true" />
       <el-table-column label="排序" align="center" prop="sort" width="80" />
       <el-table-column label="状态" align="center" prop="status" width="90">
         <template #default="scope">
@@ -67,8 +75,10 @@
         </template>
       </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="180" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="180">
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="320">
         <template #default="scope">
+          <el-button link type="primary" icon="Tickets" @click="handleOpenModelAsset(scope.row, 'version')">版本管理</el-button>
+          <el-button link type="primary" icon="Share" @click="handleOpenModelAsset(scope.row, 'relation')">支持渠道</el-button>
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['ai:model:edit']">修改</el-button>
           <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['ai:model:remove']">删除</el-button>
         </template>
@@ -106,8 +116,10 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="服务商" prop="provider">
-              <el-input v-model="form.provider" placeholder="请输入服务商" />
+            <el-form-item label="官方提供商" prop="officialProviderId">
+              <el-select v-model="form.officialProviderId" placeholder="请选择提供商" filterable>
+                <el-option v-for="item in providerOptions" :key="item.providerId" :label="item.providerName" :value="item.providerId" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -129,6 +141,11 @@
             </el-form-item>
           </el-col>
           <el-col :span="24">
+            <el-form-item label="能力标签" prop="capabilities">
+              <el-input v-model="form.capabilities" type="textarea" :rows="2" placeholder='例如 ["text_to_image","image_to_image"]' />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
             <el-form-item label="模型简介" prop="intro">
               <el-input v-model="form.intro" type="textarea" :rows="3" placeholder="请输入模型简介" />
             </el-form-item>
@@ -147,15 +164,134 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="assetOpen" width="1100px" append-to-body destroy-on-close>
+      <template #header>
+        <span>{{ currentModel.modelName || "模型管理" }} / {{ assetTab === "version" ? "版本管理" : "支持渠道" }}</span>
+      </template>
+
+      <el-tabs v-model="assetTab" @tab-change="handleAssetTabChange">
+        <el-tab-pane label="版本管理" name="version">
+          <el-row :gutter="10" class="mb8">
+            <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAddVersion" v-hasPermi="['ai:modelVersion:add']">新增版本</el-button></el-col>
+          </el-row>
+          <el-table v-loading="assetLoading" :data="versionList">
+            <el-table-column label="版本名称" prop="versionName" min-width="140" />
+            <el-table-column label="版本编码" prop="versionCode" min-width="140" />
+            <el-table-column label="实际模型名" prop="apiModelName" min-width="160" show-overflow-tooltip />
+            <el-table-column label="算力" prop="powerCost" width="90" />
+            <el-table-column label="输入单价" prop="inputPrice" width="100" />
+            <el-table-column label="输出单价" prop="outputPrice" width="100" />
+            <el-table-column label="状态" prop="status" width="90">
+              <template #default="scope"><el-tag :type="scope.row.status === '0' ? 'success' : 'info'">{{ scope.row.status === '0' ? '正常' : '停用' }}</el-tag></template>
+            </el-table-column>
+            <el-table-column label="操作" width="180">
+              <template #default="scope">
+                <el-button link type="primary" icon="Edit" @click="handleEditVersion(scope.row)" v-hasPermi="['ai:modelVersion:edit']">修改</el-button>
+                <el-button link type="primary" icon="Delete" @click="handleDeleteVersion(scope.row)" v-hasPermi="['ai:modelVersion:remove']">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <el-tab-pane label="支持渠道" name="relation">
+          <el-row :gutter="10" class="mb8">
+            <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAddRelation" v-hasPermi="['ai:channelModelRelation:add']">新增映射</el-button></el-col>
+          </el-row>
+          <el-table v-loading="assetLoading" :data="relationList">
+            <el-table-column label="提供商" prop="providerName" min-width="120" />
+            <el-table-column label="渠道" prop="channelName" min-width="140" />
+            <el-table-column label="版本" prop="versionName" min-width="140" />
+            <el-table-column label="远程模型名" prop="remoteModelName" min-width="180" show-overflow-tooltip />
+            <el-table-column label="价格系数" prop="priceRatio" width="100" />
+            <el-table-column label="优先级" prop="priority" width="90" />
+            <el-table-column label="权重" prop="weight" width="90" />
+            <el-table-column label="状态" prop="enabled" width="90">
+              <template #default="scope"><el-tag :type="scope.row.enabled === '0' ? 'success' : 'info'">{{ scope.row.enabled === '0' ? '启用' : '停用' }}</el-tag></template>
+            </el-table-column>
+            <el-table-column label="操作" width="180">
+              <template #default="scope">
+                <el-button link type="primary" icon="Edit" @click="handleEditRelation(scope.row)" v-hasPermi="['ai:channelModelRelation:edit']">修改</el-button>
+                <el-button link type="primary" icon="Delete" @click="handleDeleteRelation(scope.row)" v-hasPermi="['ai:channelModelRelation:remove']">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
+    </el-dialog>
+
+    <el-dialog :title="versionDialogTitle" v-model="versionOpen" width="760px" append-to-body>
+      <el-form ref="versionRef" :model="versionForm" :rules="versionRules" label-width="100px">
+        <el-row>
+          <el-col :span="12"><el-form-item label="版本名称" prop="versionName"><el-input v-model="versionForm.versionName" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="版本编码" prop="versionCode"><el-input v-model="versionForm.versionCode" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="实际模型名" prop="apiModelName"><el-input v-model="versionForm.apiModelName" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="消耗算力" prop="powerCost"><el-input-number v-model="versionForm.powerCost" :min="0" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="上下文长度" prop="contextLength"><el-input-number v-model="versionForm.contextLength" :min="0" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="输入单价" prop="inputPrice"><el-input-number v-model="versionForm.inputPrice" :min="0" :precision="4" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="输出单价" prop="outputPrice"><el-input-number v-model="versionForm.outputPrice" :min="0" :precision="4" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="速度等级" prop="speedLevel"><el-input-number v-model="versionForm.speedLevel" :min="0" :max="10" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="质量等级" prop="qualityLevel"><el-input-number v-model="versionForm.qualityLevel" :min="0" :max="10" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="状态" prop="status"><el-radio-group v-model="versionForm.status"><el-radio value="0">正常</el-radio><el-radio value="1">停用</el-radio></el-radio-group></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="支持比例" prop="supportRatio"><el-input v-model="versionForm.supportRatio" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="支持风格" prop="supportStyle"><el-input v-model="versionForm.supportStyle" type="textarea" :rows="2" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="支持模式" prop="supportMode"><el-input v-model="versionForm.supportMode" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="扩展配置" prop="extConfig"><el-input v-model="versionForm.extConfig" type="textarea" :rows="3" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="备注" prop="remark"><el-input v-model="versionForm.remark" type="textarea" :rows="2" /></el-form-item></el-col>
+        </el-row>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="submitVersionForm">确 定</el-button>
+          <el-button @click="versionOpen = false">取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog :title="relationDialogTitle" v-model="relationOpen" width="760px" append-to-body>
+      <el-form ref="relationRef" :model="relationForm" :rules="relationRules" label-width="110px">
+        <el-form-item label="所属渠道" prop="channelId">
+          <el-select v-model="relationForm.channelId" filterable style="width: 100%">
+            <el-option v-for="item in channelOptions" :key="item.channelId" :label="item.providerName ? `${item.providerName} / ${item.channelName}` : item.channelName" :value="item.channelId" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="模型版本" prop="modelVersionId">
+          <el-select v-model="relationForm.modelVersionId" filterable style="width: 100%">
+            <el-option v-for="item in versionList" :key="item.versionId" :label="item.versionName" :value="item.versionId" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="远程模型名" prop="remoteModelName"><el-input v-model="relationForm.remoteModelName" /></el-form-item>
+        <el-row>
+          <el-col :span="12"><el-form-item label="价格系数" prop="priceRatio"><el-input-number v-model="relationForm.priceRatio" :min="0" :precision="4" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="优先级" prop="priority"><el-input-number v-model="relationForm.priority" :min="0" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="权重" prop="weight"><el-input-number v-model="relationForm.weight" :min="0" style="width: 100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="最大QPS" prop="maxQps"><el-input-number v-model="relationForm.maxQps" :min="0" style="width: 100%" /></el-form-item></el-col>
+        </el-row>
+        <el-form-item label="状态" prop="enabled"><el-radio-group v-model="relationForm.enabled"><el-radio value="0">启用</el-radio><el-radio value="1">停用</el-radio></el-radio-group></el-form-item>
+        <el-form-item label="备注" prop="remark"><el-input v-model="relationForm.remark" type="textarea" :rows="3" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="submitRelationForm">确 定</el-button>
+          <el-button @click="relationOpen = false">取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="AiModel">
 import { addModel, delModel, getModel, listModel, updateModel } from "@/api/ai/model"
+import { listProvider } from "@/api/ai/provider"
+import { addModelVersion, delModelVersion, getModelVersion, listModelVersion, updateModelVersion } from "@/api/ai/modelVersion"
+import { addChannelModelRelation, delChannelModelRelation, getChannelModelRelation, listChannelModelRelation, updateChannelModelRelation } from "@/api/ai/channelModelRelation"
+import { listProviderChannel } from "@/api/ai/providerChannel"
 
 const { proxy } = getCurrentInstance()
 
 const modelList = ref([])
+const providerOptions = ref([])
+const channelOptions = ref([])
 const open = ref(false)
 const loading = ref(true)
 const showSearch = ref(true)
@@ -164,25 +300,47 @@ const single = ref(true)
 const multiple = ref(true)
 const total = ref(0)
 const title = ref("")
+const assetOpen = ref(false)
+const assetLoading = ref(false)
+const assetTab = ref("version")
+const currentModel = ref({})
+const versionList = ref([])
+const relationList = ref([])
+const versionOpen = ref(false)
+const relationOpen = ref(false)
+const versionDialogTitle = ref("")
+const relationDialogTitle = ref("")
 
 const data = reactive({
   form: {},
+  versionForm: {},
+  relationForm: {},
   queryParams: {
     pageNum: 1,
     pageSize: 10,
     modelName: undefined,
     modelCode: undefined,
     modelType: undefined,
+    officialProviderId: undefined,
     status: undefined
   },
   rules: {
     modelName: [{ required: true, message: "模型名称不能为空", trigger: "blur" }],
     modelCode: [{ required: true, message: "模型编码不能为空", trigger: "blur" }],
     modelType: [{ required: true, message: "模型类型不能为空", trigger: "change" }]
+  },
+  versionRules: {
+    versionName: [{ required: true, message: "版本名称不能为空", trigger: "blur" }],
+    versionCode: [{ required: true, message: "版本编码不能为空", trigger: "blur" }]
+  },
+  relationRules: {
+    channelId: [{ required: true, message: "渠道不能为空", trigger: "change" }],
+    modelVersionId: [{ required: true, message: "模型版本不能为空", trigger: "change" }],
+    remoteModelName: [{ required: true, message: "远程模型名不能为空", trigger: "blur" }]
   }
 })
 
-const { queryParams, form, rules } = toRefs(data)
+const { queryParams, form, rules, versionForm, relationForm, versionRules, relationRules } = toRefs(data)
 
 function getList() {
   loading.value = true
@@ -190,6 +348,18 @@ function getList() {
     modelList.value = response.rows
     total.value = response.total
     loading.value = false
+  })
+}
+
+function getProviderOptions() {
+  listProvider({ pageNum: 1, pageSize: 1000, status: "0" }).then(response => {
+    providerOptions.value = response.rows || []
+  })
+}
+
+function getChannelOptions() {
+  listProviderChannel({ pageNum: 1, pageSize: 1000, status: "0" }).then(response => {
+    channelOptions.value = response.rows || []
   })
 }
 
@@ -205,6 +375,8 @@ function reset() {
     modelCode: undefined,
     modelType: "IMAGE",
     provider: undefined,
+    officialProviderId: undefined,
+    capabilities: undefined,
     coverUrl: undefined,
     intro: undefined,
     sort: 0,
@@ -269,5 +441,151 @@ function handleDelete(row) {
   }).catch(() => {})
 }
 
+function handleOpenModelAsset(row, tab) {
+  currentModel.value = row
+  assetTab.value = tab
+  assetOpen.value = true
+  loadAssetData()
+}
+
+function handleAssetTabChange() {
+  loadAssetData()
+}
+
+function loadAssetData() {
+  if (!currentModel.value.modelId) return
+  assetLoading.value = true
+  listModelVersion({ pageNum: 1, pageSize: 1000, modelId: currentModel.value.modelId }).then(versionResponse => {
+    versionList.value = versionResponse.rows || []
+    const request = assetTab.value === "version"
+      ? Promise.resolve({ rows: versionList.value })
+      : listChannelModelRelation({ pageNum: 1, pageSize: 1000, modelId: currentModel.value.modelId })
+    request.then(response => {
+      if (assetTab.value === "relation") {
+        relationList.value = response.rows || []
+      }
+      assetLoading.value = false
+    })
+  })
+}
+
+function resetVersionForm() {
+  versionForm.value = {
+    versionId: undefined,
+    modelId: currentModel.value.modelId,
+    versionName: undefined,
+    versionCode: undefined,
+    apiModelName: undefined,
+    powerCost: 0,
+    contextLength: 0,
+    inputPrice: 0,
+    outputPrice: 0,
+    speedLevel: 0,
+    qualityLevel: 0,
+    supportRatio: undefined,
+    supportStyle: undefined,
+    supportMode: undefined,
+    extConfig: undefined,
+    status: "0",
+    remark: undefined
+  }
+  proxy.resetForm("versionRef")
+}
+
+function handleAddVersion() {
+  resetVersionForm()
+  versionDialogTitle.value = "新增版本"
+  versionOpen.value = true
+}
+
+function handleEditVersion(row) {
+  resetVersionForm()
+  getModelVersion(row.versionId).then(response => {
+    versionForm.value = response.data
+    versionDialogTitle.value = "修改版本"
+    versionOpen.value = true
+  })
+}
+
+function submitVersionForm() {
+  versionForm.value.modelId = currentModel.value.modelId
+  proxy.$refs["versionRef"].validate(valid => {
+    if (!valid) return
+    const request = versionForm.value.versionId ? updateModelVersion(versionForm.value) : addModelVersion(versionForm.value)
+    request.then(() => {
+      proxy.$modal.msgSuccess(versionForm.value.versionId ? "修改成功" : "新增成功")
+      versionOpen.value = false
+      loadAssetData()
+    })
+  })
+}
+
+function handleDeleteVersion(row) {
+  proxy.$modal.confirm('是否确认删除版本编号为"' + row.versionId + '"的数据项？').then(function() {
+    return delModelVersion(row.versionId)
+  }).then(() => {
+    proxy.$modal.msgSuccess("删除成功")
+    loadAssetData()
+  }).catch(() => {})
+}
+
+function resetRelationForm() {
+  relationForm.value = {
+    relationId: undefined,
+    channelId: undefined,
+    modelVersionId: versionList.value.length ? versionList.value[0].versionId : undefined,
+    remoteModelName: undefined,
+    enabled: "0",
+    priceRatio: 1,
+    priority: 0,
+    weight: 100,
+    maxQps: 0,
+    remark: undefined
+  }
+  proxy.resetForm("relationRef")
+}
+
+function handleAddRelation() {
+  if (!versionList.value.length) {
+    proxy.$modal.msgWarning("请先为当前模型配置版本")
+    return
+  }
+  resetRelationForm()
+  relationDialogTitle.value = "新增支持渠道"
+  relationOpen.value = true
+}
+
+function handleEditRelation(row) {
+  resetRelationForm()
+  getChannelModelRelation(row.relationId).then(response => {
+    relationForm.value = response.data
+    relationDialogTitle.value = "修改支持渠道"
+    relationOpen.value = true
+  })
+}
+
+function submitRelationForm() {
+  proxy.$refs["relationRef"].validate(valid => {
+    if (!valid) return
+    const request = relationForm.value.relationId ? updateChannelModelRelation(relationForm.value) : addChannelModelRelation(relationForm.value)
+    request.then(() => {
+      proxy.$modal.msgSuccess(relationForm.value.relationId ? "修改成功" : "新增成功")
+      relationOpen.value = false
+      loadAssetData()
+    })
+  })
+}
+
+function handleDeleteRelation(row) {
+  proxy.$modal.confirm('是否确认删除映射编号为"' + row.relationId + '"的数据项？').then(function() {
+    return delChannelModelRelation(row.relationId)
+  }).then(() => {
+    proxy.$modal.msgSuccess("删除成功")
+    loadAssetData()
+  }).catch(() => {})
+}
+
 getList()
+getProviderOptions()
+getChannelOptions()
 </script>

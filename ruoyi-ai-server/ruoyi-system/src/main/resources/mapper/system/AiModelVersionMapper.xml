@@ -9,7 +9,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="modelId" column="model_id"/>
         <result property="versionCode" column="version_code"/>
         <result property="versionName" column="version_name"/>
+        <result property="apiModelName" column="api_model_name"/>
         <result property="powerCost" column="power_cost"/>
+        <result property="contextLength" column="context_length"/>
+        <result property="inputPrice" column="input_price"/>
+        <result property="outputPrice" column="output_price"/>
+        <result property="speedLevel" column="speed_level"/>
+        <result property="qualityLevel" column="quality_level"/>
         <result property="supportRatio" column="support_ratio"/>
         <result property="supportStyle" column="support_style"/>
         <result property="supportMode" column="support_mode"/>
@@ -24,7 +30,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectAiModelVersionVo">
-        select v.version_id, v.model_id, v.version_code, v.version_name, v.power_cost, v.support_ratio, v.support_style,
+        select v.version_id, v.model_id, v.version_code, v.version_name, v.api_model_name, v.power_cost,
+               v.context_length, v.input_price, v.output_price, v.speed_level, v.quality_level, v.support_ratio, v.support_style,
                v.support_mode, v.ext_config, v.status, v.remark, v.create_by, v.create_time, v.update_by, v.update_time,
                m.model_name
         from ai_c_model_version v
@@ -46,6 +53,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="versionName != null and versionName != ''">
                 and v.version_name like concat('%', #{versionName}, '%')
             </if>
+            <if test="apiModelName != null and apiModelName != ''">
+                and v.api_model_name like concat('%', #{apiModelName}, '%')
+            </if>
             <if test="status != null and status != ''">and v.status = #{status}</if>
         </where>
         order by v.version_id desc
@@ -63,7 +73,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="modelId != null">model_id,</if>
             <if test="versionCode != null and versionCode != ''">version_code,</if>
             <if test="versionName != null and versionName != ''">version_name,</if>
+            <if test="apiModelName != null and apiModelName != ''">api_model_name,</if>
             <if test="powerCost != null">power_cost,</if>
+            <if test="contextLength != null">context_length,</if>
+            <if test="inputPrice != null">input_price,</if>
+            <if test="outputPrice != null">output_price,</if>
+            <if test="speedLevel != null">speed_level,</if>
+            <if test="qualityLevel != null">quality_level,</if>
             <if test="supportRatio != null and supportRatio != ''">support_ratio,</if>
             <if test="supportStyle != null and supportStyle != ''">support_style,</if>
             <if test="supportMode != null and supportMode != ''">support_mode,</if>
@@ -77,7 +93,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="modelId != null">#{modelId},</if>
             <if test="versionCode != null and versionCode != ''">#{versionCode},</if>
             <if test="versionName != null and versionName != ''">#{versionName},</if>
+            <if test="apiModelName != null and apiModelName != ''">#{apiModelName},</if>
             <if test="powerCost != null">#{powerCost},</if>
+            <if test="contextLength != null">#{contextLength},</if>
+            <if test="inputPrice != null">#{inputPrice},</if>
+            <if test="outputPrice != null">#{outputPrice},</if>
+            <if test="speedLevel != null">#{speedLevel},</if>
+            <if test="qualityLevel != null">#{qualityLevel},</if>
             <if test="supportRatio != null and supportRatio != ''">#{supportRatio},</if>
             <if test="supportStyle != null and supportStyle != ''">#{supportStyle},</if>
             <if test="supportMode != null and supportMode != ''">#{supportMode},</if>
@@ -95,7 +117,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="modelId != null">model_id = #{modelId},</if>
             <if test="versionCode != null and versionCode != ''">version_code = #{versionCode},</if>
             <if test="versionName != null and versionName != ''">version_name = #{versionName},</if>
+            <if test="apiModelName != null">api_model_name = #{apiModelName},</if>
             <if test="powerCost != null">power_cost = #{powerCost},</if>
+            <if test="contextLength != null">context_length = #{contextLength},</if>
+            <if test="inputPrice != null">input_price = #{inputPrice},</if>
+            <if test="outputPrice != null">output_price = #{outputPrice},</if>
+            <if test="speedLevel != null">speed_level = #{speedLevel},</if>
+            <if test="qualityLevel != null">quality_level = #{qualityLevel},</if>
             <if test="supportRatio != null">support_ratio = #{supportRatio},</if>
             <if test="supportStyle != null">support_style = #{supportStyle},</if>
             <if test="supportMode != null">support_mode = #{supportMode},</if>

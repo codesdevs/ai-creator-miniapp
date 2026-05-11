@@ -10,6 +10,7 @@ import com.ruoyi.system.domain.vo.AdminCardCodeGenerateBo;
 import com.ruoyi.system.mapper.AiCardCodeMapper;
 import com.ruoyi.system.service.IAiCardCodeService;
 import com.ruoyi.system.service.IAiRechargePackageService;
+import com.ruoyi.system.service.IAiWalletService;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class AiCardCodeServiceImpl implements IAiCardCodeService
     @Autowired
     private IAiRechargePackageService aiRechargePackageService;
 
+    @Autowired
+    private IAiWalletService aiWalletService;
+
     @Override
     public AiCardCode selectAiCardCodeById(Long cardCodeId)
     {
@@ -38,6 +42,40 @@ public class AiCardCodeServiceImpl implements IAiCardCodeService
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AiCardCode redeemCardCode(Long userId, String cardCode)
+    {
+        if (userId == null)
+        {
+            throw new ServiceException("用户信息不能为空");
+        }
+        if (StringUtils.isBlank(cardCode))
+        {
+            throw new ServiceException("卡密不能为空");
+        }
+        AiCardCode entity = aiCardCodeMapper.selectAiCardCodeByCode(cardCode.trim().toUpperCase());
+        if (entity == null)
+        {
+            throw new ServiceException("卡密不存在");
+        }
+        if (!StringUtils.equals("0", entity.getStatus()))
+        {
+            throw new ServiceException("卡密不可用");
+        }
+
+        entity.setStatus("1");
+        entity.setUsedUserId(userId);
+        entity.setUsedTime(DateUtils.getNowDate());
+        entity.setUpdateTime(DateUtils.getNowDate());
+        entity.setRemark(StringUtils.defaultIfBlank(entity.getRemark(), "卡密兑换"));
+        aiCardCodeMapper.updateAiCardCode(entity);
+
+        int power = (entity.getPowerNum() == null ? 0 : entity.getPowerNum()) + (entity.getBonusPowerNum() == null ? 0 : entity.getBonusPowerNum());
+        aiWalletService.rechargePower(userId, power, "CARD_CODE_REDEEM", entity.getCardCodeId(), "卡密兑换到账：" + entity.getCardCode());
+        return aiCardCodeMapper.selectAiCardCodeById(entity.getCardCodeId());
+    }
+
+    @Override
     public int insertAiCardCode(AiCardCode aiCardCode)
     {
         fillPackageSnapshot(aiCardCode);
@@ -48,6 +86,34 @@ public class AiCardCodeServiceImpl implements IAiCardCodeService
         aiCardCode.setStatus(StringUtils.defaultIfBlank(aiCardCode.getStatus(), "0"));
         aiCardCode.setCreateTime(DateUtils.getNowDate());
         return aiCardCodeMapper.insertAiCardCode(aiCardCode);
+    }
+
+    @Override
+    public int updateAiCardCode(AiCardCode aiCardCode)
+    {
+        AiCardCode dbCardCode = aiCardCodeMapper.selectAiCardCodeById(aiCardCode.getCardCodeId());
+        if (dbCardCode == null)
+        {
+            throw new ServiceException("卡密不存在");
+        }
+        if (StringUtils.equals("1", dbCardCode.getStatus()))
+        {
+            throw new ServiceException("已使用卡密不允许修改");
+        }
+        fillPackageSnapshot(aiCardCode);
+        if (StringUtils.isBlank(aiCardCode.getCardCode()))
+        {
+            aiCardCode.setCardCode(dbCardCode.getCardCode());
+        }
+        else
+        {
+            aiCardCode.setCardCode(aiCardCode.getCardCode().trim().toUpperCase());
+        }
+        aiCardCode.setUsedUserId(dbCardCode.getUsedUserId());
+        aiCardCode.setOrderId(dbCardCode.getOrderId());
+        aiCardCode.setUsedTime(dbCardCode.getUsedTime());
+        aiCardCode.setUpdateTime(DateUtils.getNowDate());
+        return aiCardCodeMapper.updateAiCardCode(aiCardCode);
     }
 
     @Override

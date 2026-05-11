@@ -25,6 +25,10 @@ public class AiTask extends BaseEntity
 
     private Long modelVersionId;
 
+    private Long channelId;
+
+    private Long channelModelRelationId;
+
     private String taskType;
 
     private String createMode;
@@ -45,6 +49,8 @@ public class AiTask extends BaseEntity
 
     private String thirdTaskId;
 
+    private String remoteModelName;
+
     private String failReason;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -56,6 +62,10 @@ public class AiTask extends BaseEntity
     private String modelName;
 
     private String versionName;
+
+    private String providerName;
+
+    private String channelName;
 
     public Long getTaskId()
     {
@@ -105,6 +115,26 @@ public class AiTask extends BaseEntity
     public void setModelVersionId(Long modelVersionId)
     {
         this.modelVersionId = modelVersionId;
+    }
+
+    public Long getChannelId()
+    {
+        return channelId;
+    }
+
+    public void setChannelId(Long channelId)
+    {
+        this.channelId = channelId;
+    }
+
+    public Long getChannelModelRelationId()
+    {
+        return channelModelRelationId;
+    }
+
+    public void setChannelModelRelationId(Long channelModelRelationId)
+    {
+        this.channelModelRelationId = channelModelRelationId;
     }
 
     public String getTaskType()
@@ -207,6 +237,16 @@ public class AiTask extends BaseEntity
         this.thirdTaskId = thirdTaskId;
     }
 
+    public String getRemoteModelName()
+    {
+        return remoteModelName;
+    }
+
+    public void setRemoteModelName(String remoteModelName)
+    {
+        this.remoteModelName = remoteModelName;
+    }
+
     public String getFailReason()
     {
         return failReason;
@@ -255,6 +295,26 @@ public class AiTask extends BaseEntity
     public void setVersionName(String versionName)
     {
         this.versionName = versionName;
+    }
+
+    public String getProviderName()
+    {
+        return providerName;
+    }
+
+    public void setProviderName(String providerName)
+    {
+        this.providerName = providerName;
+    }
+
+    public String getChannelName()
+    {
+        return channelName;
+    }
+
+    public void setChannelName(String channelName)
+    {
+        this.channelName = channelName;
     }
 
     @Override

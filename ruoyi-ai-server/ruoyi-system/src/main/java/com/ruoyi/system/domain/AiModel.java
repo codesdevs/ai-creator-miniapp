@@ -28,8 +28,17 @@ public class AiModel extends BaseEntity
     /** 模型类型 */
     private String modelType;
 
-    /** 服务商 */
+    /** 兼容旧字段：服务商编码/名称 */
     private String provider;
+
+    /** 官方提供商ID */
+    private Long officialProviderId;
+
+    /** 提供商名称 */
+    private String providerName;
+
+    /** 能力标签 */
+    private String capabilities;
 
     /** 封面地址 */
     private String coverUrl;
@@ -102,6 +111,37 @@ public class AiModel extends BaseEntity
         this.provider = provider;
     }
 
+    public Long getOfficialProviderId()
+    {
+        return officialProviderId;
+    }
+
+    public void setOfficialProviderId(Long officialProviderId)
+    {
+        this.officialProviderId = officialProviderId;
+    }
+
+    public String getProviderName()
+    {
+        return providerName;
+    }
+
+    public void setProviderName(String providerName)
+    {
+        this.providerName = providerName;
+    }
+
+    @Size(min = 0, max = 2000, message = "能力标签长度不能超过2000个字符")
+    public String getCapabilities()
+    {
+        return capabilities;
+    }
+
+    public void setCapabilities(String capabilities)
+    {
+        this.capabilities = capabilities;
+    }
+
     @Size(min = 0, max = 255, message = "封面地址长度不能超过255个字符")
     public String getCoverUrl()
     {
@@ -154,6 +194,9 @@ public class AiModel extends BaseEntity
             .append("modelName", getModelName())
             .append("modelType", getModelType())
             .append("provider", getProvider())
+            .append("officialProviderId", getOfficialProviderId())
+            .append("providerName", getProviderName())
+            .append("capabilities", getCapabilities())
             .append("coverUrl", getCoverUrl())
             .append("intro", getIntro())
             .append("status", getStatus())

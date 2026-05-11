@@ -52,6 +52,7 @@ public class AppTaskController
         AjaxResult result = AjaxResult.success();
         result.put("task", task);
         result.put("resultList", aiTaskService.selectAiTaskResultListByTaskId(taskId));
+        result.put("refunded", "FAIL".equals(task.getStatus()) && aiTaskService.hasTaskRefunded(taskId));
         return result;
     }
 

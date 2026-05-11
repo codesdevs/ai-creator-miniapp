@@ -28,7 +28,7 @@
         <view class="card-head">
           <view>
             <text class="card-title">{{ item.modelName }}</text>
-            <text class="card-sub">{{ item.provider || '未配置服务商' }}</text>
+            <text class="card-sub">{{ item.providerName || item.provider || '未配置服务商' }}</text>
           </view>
           <text class="badge">{{ item.modelType === 'VIDEO' ? '视频' : '图片' }}</text>
         </view>

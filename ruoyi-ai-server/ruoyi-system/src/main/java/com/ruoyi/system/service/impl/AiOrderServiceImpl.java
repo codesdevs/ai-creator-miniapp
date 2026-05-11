@@ -54,6 +54,21 @@ public class AiOrderServiceImpl implements IAiOrderService
     }
 
     @Override
+    public AiOrder selectUserOrderById(Long userId, Long orderId)
+    {
+        if (userId == null || orderId == null)
+        {
+            throw new ServiceException("订单参数不能为空");
+        }
+        AiOrder order = aiOrderMapper.selectAiOrderById(orderId);
+        if (order == null || !userId.equals(order.getUserId()))
+        {
+            throw new ServiceException("订单不存在");
+        }
+        return order;
+    }
+
+    @Override
     public int insertAiOrder(AiOrder aiOrder)
     {
         aiOrder.setCreateTime(DateUtils.getNowDate());
@@ -115,6 +130,22 @@ public class AiOrderServiceImpl implements IAiOrderService
         order.setOrderStatus("WAIT_PAY");
         order.setRemark("小程序端创建充值订单");
         insertAiOrder(order);
+        return aiOrderMapper.selectAiOrderById(order.getOrderId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AiOrder cancelUserOrder(Long userId, Long orderId)
+    {
+        AiOrder order = selectUserOrderById(userId, orderId);
+        if (!StringUtils.equals("WAIT_PAY", order.getOrderStatus()))
+        {
+            throw new ServiceException("当前订单状态不允许取消");
+        }
+        order.setOrderStatus("CLOSED");
+        order.setRemark("用户主动取消订单");
+        order.setUpdateTime(DateUtils.getNowDate());
+        aiOrderMapper.updateAiOrder(order);
         return aiOrderMapper.selectAiOrderById(order.getOrderId());
     }
 

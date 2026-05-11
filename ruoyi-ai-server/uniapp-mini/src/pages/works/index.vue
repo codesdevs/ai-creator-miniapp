@@ -17,22 +17,42 @@
         v-for="item in tasks"
         :key="item.taskId"
         class="task-card"
-        @tap="goDetail(item.taskId)"
       >
-        <view class="task-head">
-          <view>
-            <text class="task-model">{{ item.modelName || '未命名模型' }}</text>
-            <text class="task-version">{{ item.versionName || '-' }}</text>
+        <view class="task-main" @tap="goDetail(item.taskId)">
+          <view class="task-head">
+            <view>
+              <text class="task-model">{{ item.modelName || '未命名模型' }}</text>
+              <text class="task-version">{{ item.versionName || '-' }}</text>
+            </view>
+            <view :class="['status-pill', statusClass(item.status)]">
+              {{ statusText(item.status) }}
+            </view>
           </view>
-          <view :class="['status-pill', statusClass(item.status)]">
-            {{ statusText(item.status) }}
+          <view>
+            <text class="task-prompt">{{ item.promptText || '未填写提示词' }}</text>
+            <view class="task-meta">
+              <text>{{ formatMode(item.createMode) }}</text>
+              <text>{{ item.powerCost || 0 }} 算力</text>
+              <text>{{ item.submitTime || '-' }}</text>
+            </view>
           </view>
         </view>
-        <text class="task-prompt">{{ item.promptText || '未填写提示词' }}</text>
-        <view class="task-meta">
-          <text>{{ formatMode(item.createMode) }}</text>
-          <text>{{ item.powerCost || 0 }} 算力</text>
-          <text>{{ item.submitTime || '-' }}</text>
+        <view class="task-actions">
+          <text class="task-link" @tap.stop="goDetail(item.taskId)">查看详情</text>
+          <text
+            v-if="item.status === 'FAIL'"
+            class="task-link warn"
+            @tap.stop="repeatCreate(item)"
+          >
+            原参数重试
+          </text>
+          <text
+            v-else-if="item.status === 'SUCCESS'"
+            class="task-link primary"
+            @tap.stop="repeatCreate(item)"
+          >
+            同款再来
+          </text>
         </view>
       </view>
     </view>
@@ -105,6 +125,15 @@ function goAppCenter() {
   uni.switchTab({ url: '/pages/app/index' })
 }
 
+function repeatCreate(item) {
+  if (!item?.modelId || !item?.taskId) {
+    return
+  }
+  uni.navigateTo({
+    url: `/pages/create/image?modelId=${item.modelId}&sourceTaskId=${item.taskId}`
+  })
+}
+
 onLoad(loadData)
 onShow(loadData)
 </script>
@@ -146,6 +175,10 @@ onShow(loadData)
   padding: 28rpx;
   border-radius: 24rpx;
   background: linear-gradient(180deg, #1b223d 0%, #13192d 100%);
+}
+
+.task-main {
+  display: block;
 }
 
 .task-head,
@@ -208,6 +241,28 @@ onShow(loadData)
   color: #a9b4dd;
   font-size: 22rpx;
   flex-wrap: wrap;
+}
+
+.task-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24rpx;
+  margin-top: 22rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.06);
+}
+
+.task-link {
+  color: #9fb0ef;
+  font-size: 24rpx;
+}
+
+.task-link.primary {
+  color: #7ea8ff;
+}
+
+.task-link.warn {
+  color: #efb44e;
 }
 
 .empty-title {

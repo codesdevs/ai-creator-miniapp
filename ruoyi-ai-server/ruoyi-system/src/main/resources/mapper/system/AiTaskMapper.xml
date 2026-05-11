@@ -10,6 +10,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="userId" column="user_id"/>
         <result property="modelId" column="model_id"/>
         <result property="modelVersionId" column="model_version_id"/>
+        <result property="channelId" column="channel_id"/>
+        <result property="channelModelRelationId" column="channel_model_relation_id"/>
         <result property="taskType" column="task_type"/>
         <result property="createMode" column="create_mode"/>
         <result property="promptText" column="prompt_text"/>
@@ -20,6 +22,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="status" column="status"/>
         <result property="powerCost" column="power_cost"/>
         <result property="thirdTaskId" column="third_task_id"/>
+        <result property="remoteModelName" column="remote_model_name"/>
         <result property="failReason" column="fail_reason"/>
         <result property="submitTime" column="submit_time"/>
         <result property="finishTime" column="finish_time"/>
@@ -30,17 +33,22 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="remark" column="remark"/>
         <result property="modelName" column="model_name"/>
         <result property="versionName" column="version_name"/>
+        <result property="providerName" column="provider_name"/>
+        <result property="channelName" column="channel_name"/>
     </resultMap>
 
     <sql id="selectAiTaskVo">
-        select t.task_id, t.task_no, t.user_id, t.model_id, t.model_version_id, t.task_type, t.create_mode,
+        select t.task_id, t.task_no, t.user_id, t.model_id, t.model_version_id, t.channel_id, t.channel_model_relation_id,
+               t.task_type, t.create_mode,
                cast(t.prompt_text as char) as prompt_text, cast(t.negative_prompt as char) as negative_prompt,
-               t.style_code, t.ratio_code, t.source_url, t.status, t.power_cost, t.third_task_id,
+               t.style_code, t.ratio_code, t.source_url, t.status, t.power_cost, t.third_task_id, t.remote_model_name,
                t.fail_reason, t.submit_time, t.finish_time, t.create_by, t.create_time, t.update_by, t.update_time,
-               t.remark, m.model_name, v.version_name
+               t.remark, m.model_name, v.version_name, p.provider_name, c.channel_name
         from ai_c_task t
         left join ai_c_model m on m.model_id = t.model_id
         left join ai_c_model_version v on v.version_id = t.model_version_id
+        left join ai_c_provider_channel c on c.channel_id = t.channel_id
+        left join ai_c_provider p on p.provider_id = c.provider_id
     </sql>
 
     <select id="selectAiTaskById" parameterType="Long" resultMap="AiTaskResult">
@@ -69,6 +77,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null">user_id,</if>
             <if test="modelId != null">model_id,</if>
             <if test="modelVersionId != null">model_version_id,</if>
+            <if test="channelId != null">channel_id,</if>
+            <if test="channelModelRelationId != null">channel_model_relation_id,</if>
             <if test="taskType != null and taskType != ''">task_type,</if>
             <if test="createMode != null and createMode != ''">create_mode,</if>
             <if test="promptText != null and promptText != ''">prompt_text,</if>
@@ -79,6 +89,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="status != null and status != ''">status,</if>
             <if test="powerCost != null">power_cost,</if>
             <if test="thirdTaskId != null and thirdTaskId != ''">third_task_id,</if>
+            <if test="remoteModelName != null and remoteModelName != ''">remote_model_name,</if>
             <if test="failReason != null and failReason != ''">fail_reason,</if>
             <if test="submitTime != null and submitTime != ''">submit_time,</if>
             <if test="finishTime != null and finishTime != ''">finish_time,</if>
@@ -91,6 +102,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null">#{userId},</if>
             <if test="modelId != null">#{modelId},</if>
             <if test="modelVersionId != null">#{modelVersionId},</if>
+            <if test="channelId != null">#{channelId},</if>
+            <if test="channelModelRelationId != null">#{channelModelRelationId},</if>
             <if test="taskType != null and taskType != ''">#{taskType},</if>
             <if test="createMode != null and createMode != ''">#{createMode},</if>
             <if test="promptText != null and promptText != ''">#{promptText},</if>
@@ -101,6 +114,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="status != null and status != ''">#{status},</if>
             <if test="powerCost != null">#{powerCost},</if>
             <if test="thirdTaskId != null and thirdTaskId != ''">#{thirdTaskId},</if>
+            <if test="remoteModelName != null and remoteModelName != ''">#{remoteModelName},</if>
             <if test="failReason != null and failReason != ''">#{failReason},</if>
             <if test="submitTime != null and submitTime != ''">#{submitTime},</if>
             <if test="finishTime != null and finishTime != ''">#{finishTime},</if>

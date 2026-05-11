@@ -2,7 +2,7 @@
   <scroll-view class="page" scroll-y>
     <view class="hero" v-if="model.modelId">
       <text class="hero-name">{{ model.modelName }}</text>
-      <text class="hero-sub">{{ model.provider || '平台模型' }}</text>
+      <text class="hero-sub">{{ model.providerName || model.provider || '平台模型' }}</text>
       <text class="hero-desc">{{ model.intro || '围绕当前模型版本推荐合适的创作参数。' }}</text>
     </view>
 
@@ -10,6 +10,11 @@
     <view v-else-if="loadError" class="state error">{{ loadError }}</view>
     <template v-else>
       <view class="panel">
+        <view v-if="sourceTaskId" class="reuse-banner">
+          <text class="reuse-title">已载入历史任务参数</text>
+          <text class="reuse-desc">当前页面已自动回填上一次创作的版本、提示词、风格和比例，你可以直接修改后再次提交。</text>
+        </view>
+
         <text class="section-title">选择版本</text>
         <scroll-view class="chips-row" scroll-x>
           <view
@@ -116,16 +121,18 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getModelDetail } from '@/api/model'
-import { submitImageTask } from '@/api/task'
+import { getTaskDetail, submitImageTask } from '@/api/task'
 import { requireLogin } from '@/utils/auth'
 
 const modelId = ref()
+const sourceTaskId = ref()
 const model = ref({})
 const versions = ref([])
 const currentVersionIndex = ref(0)
 const submitting = ref(false)
 const loading = ref(false)
 const loadError = ref('')
+const draftLoaded = ref(false)
 
 const form = ref({
   createMode: '',
@@ -175,6 +182,29 @@ function applyVersionDefaults() {
   form.value.ratioCode = ratioOptions.value[0] || ''
 }
 
+function applyTaskDraft(task) {
+  if (!task) {
+    return
+  }
+  const versionIndex = versions.value.findIndex((item) => item.versionId === task.modelVersionId)
+  currentVersionIndex.value = versionIndex >= 0 ? versionIndex : 0
+  applyVersionDefaults()
+  form.value.createMode = task.createMode || form.value.createMode
+  form.value.promptText = task.promptText || ''
+  form.value.negativePrompt = task.negativePrompt || ''
+  form.value.styleCode = task.styleCode || form.value.styleCode
+  form.value.ratioCode = task.ratioCode || form.value.ratioCode
+}
+
+async function loadTaskDraft(taskId) {
+  if (!taskId || draftLoaded.value) {
+    return
+  }
+  const res = await getTaskDetail(taskId)
+  applyTaskDraft(res.task || null)
+  draftLoaded.value = true
+}
+
 async function loadDetail(id) {
   loading.value = true
   loadError.value = ''
@@ -184,6 +214,9 @@ async function loadDetail(id) {
     versions.value = res.versionList || []
     currentVersionIndex.value = 0
     applyVersionDefaults()
+    if (sourceTaskId.value) {
+      await loadTaskDraft(sourceTaskId.value)
+    }
   } catch (error) {
     loadError.value = error.message || '加载失败'
   } finally {
@@ -231,6 +264,7 @@ async function handleSubmit() {
 
 onLoad((options) => {
   modelId.value = Number(options.modelId)
+  sourceTaskId.value = options.sourceTaskId ? Number(options.sourceTaskId) : undefined
   loadDetail(modelId.value)
 })
 </script>
@@ -283,6 +317,28 @@ onLoad((options) => {
   margin-top: 22rpx;
   padding: 28rpx;
   background: #151b31;
+}
+
+.reuse-banner {
+  margin-bottom: 24rpx;
+  padding: 22rpx;
+  border-radius: 20rpx;
+  background: rgba(86, 120, 255, 0.14);
+  border: 1rpx solid rgba(126, 168, 255, 0.24);
+}
+
+.reuse-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.reuse-desc {
+  display: block;
+  margin-top: 10rpx;
+  color: #c8d4ff;
+  font-size: 23rpx;
+  line-height: 1.7;
 }
 
 .section-title,

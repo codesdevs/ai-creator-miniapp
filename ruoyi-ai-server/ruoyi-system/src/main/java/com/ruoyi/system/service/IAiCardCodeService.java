@@ -10,7 +10,11 @@ public interface IAiCardCodeService
 
     public List<AiCardCode> selectAiCardCodeList(AiCardCode aiCardCode);
 
+    public AiCardCode redeemCardCode(Long userId, String cardCode);
+
     public int insertAiCardCode(AiCardCode aiCardCode);
+
+    public int updateAiCardCode(AiCardCode aiCardCode);
 
     public int batchGenerateAiCardCode(AdminCardCodeGenerateBo bo);
 

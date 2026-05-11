@@ -28,8 +28,26 @@ public class AiModelVersion extends BaseEntity
     /** 版本名称 */
     private String versionName;
 
+    /** 实际请求模型名 */
+    private String apiModelName;
+
     /** 单次消耗算力 */
     private Integer powerCost;
+
+    /** 上下文长度 */
+    private Integer contextLength;
+
+    /** 输入单价 */
+    private java.math.BigDecimal inputPrice;
+
+    /** 输出单价 */
+    private java.math.BigDecimal outputPrice;
+
+    /** 速度等级 */
+    private Integer speedLevel;
+
+    /** 质量等级 */
+    private Integer qualityLevel;
 
     /** 支持比例 */
     private String supportRatio;
@@ -94,6 +112,17 @@ public class AiModelVersion extends BaseEntity
         this.versionName = versionName;
     }
 
+    @Size(min = 0, max = 128, message = "实际模型名称长度不能超过128个字符")
+    public String getApiModelName()
+    {
+        return apiModelName;
+    }
+
+    public void setApiModelName(String apiModelName)
+    {
+        this.apiModelName = apiModelName;
+    }
+
     public Integer getPowerCost()
     {
         return powerCost;
@@ -102,6 +131,56 @@ public class AiModelVersion extends BaseEntity
     public void setPowerCost(Integer powerCost)
     {
         this.powerCost = powerCost;
+    }
+
+    public Integer getContextLength()
+    {
+        return contextLength;
+    }
+
+    public void setContextLength(Integer contextLength)
+    {
+        this.contextLength = contextLength;
+    }
+
+    public java.math.BigDecimal getInputPrice()
+    {
+        return inputPrice;
+    }
+
+    public void setInputPrice(java.math.BigDecimal inputPrice)
+    {
+        this.inputPrice = inputPrice;
+    }
+
+    public java.math.BigDecimal getOutputPrice()
+    {
+        return outputPrice;
+    }
+
+    public void setOutputPrice(java.math.BigDecimal outputPrice)
+    {
+        this.outputPrice = outputPrice;
+    }
+
+    public Integer getSpeedLevel()
+    {
+        return speedLevel;
+    }
+
+    public void setSpeedLevel(Integer speedLevel)
+    {
+        this.speedLevel = speedLevel;
+    }
+
+    public Integer getQualityLevel()
+    {
+        return qualityLevel;
+    }
+
+    public void setQualityLevel(Integer qualityLevel)
+    {
+        this.qualityLevel = qualityLevel;
     }
 
     public String getSupportRatio()
@@ -173,7 +252,13 @@ public class AiModelVersion extends BaseEntity
             .append("modelId", getModelId())
             .append("versionCode", getVersionCode())
             .append("versionName", getVersionName())
+            .append("apiModelName", getApiModelName())
             .append("powerCost", getPowerCost())
+            .append("contextLength", getContextLength())
+            .append("inputPrice", getInputPrice())
+            .append("outputPrice", getOutputPrice())
+            .append("speedLevel", getSpeedLevel())
+            .append("qualityLevel", getQualityLevel())
             .append("supportRatio", getSupportRatio())
             .append("supportStyle", getSupportStyle())
             .append("supportMode", getSupportMode())

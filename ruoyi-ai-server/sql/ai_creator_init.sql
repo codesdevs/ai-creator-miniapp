@@ -1,12 +1,79 @@
 -- AI 创作小程序基础表
 -- 执行前请确认已导入若依基础 SQL
 
+create table if not exists ai_c_provider (
+    provider_id      bigint          not null auto_increment comment '提供商ID',
+    provider_name    varchar(64)     not null comment '提供商名称',
+    provider_code    varchar(64)     not null comment '提供商编码',
+    provider_type    varchar(20)     default 'OFFICIAL' comment '提供商类型',
+    icon             varchar(255)    default '' comment '图标',
+    website          varchar(255)    default '' comment '官网地址',
+    status           char(1)         default '0' comment '状态（0正常 1停用）',
+    remark           varchar(500)    default '' comment '备注',
+    create_by        varchar(64)     default '' comment '创建者',
+    create_time      datetime        default current_timestamp comment '创建时间',
+    update_by        varchar(64)     default '' comment '更新者',
+    update_time      datetime        default null comment '更新时间',
+    primary key (provider_id),
+    unique key uk_ai_c_provider_code (provider_code)
+) engine=innodb auto_increment=1 comment='AI提供商表';
+
+create table if not exists ai_c_provider_channel (
+    channel_id        bigint          not null auto_increment comment '渠道ID',
+    provider_id       bigint          not null comment '提供商ID',
+    channel_name      varchar(64)     not null comment '渠道名称',
+    channel_code      varchar(64)     not null comment '渠道编码',
+    base_url          varchar(255)    not null comment '基础地址',
+    api_key           varchar(512)    default '' comment 'API Key',
+    api_secret        varchar(512)    default '' comment 'API Secret',
+    proxy_enabled     char(1)         default '0' comment '是否代理（0否 1是）',
+    priority          int             default 0 comment '优先级',
+    weight            int             default 100 comment '权重',
+    timeout_ms        int             default 60000 comment '超时时间毫秒',
+    max_concurrency   int             default 0 comment '最大并发',
+    rpm_limit         int             default 0 comment 'RPM限制',
+    tpm_limit         int             default 0 comment 'TPM限制',
+    is_fallback       char(1)         default '0' comment '是否兜底（0否 1是）',
+    health_status     varchar(20)     default 'UNKNOWN' comment '健康状态',
+    status            char(1)         default '0' comment '状态（0正常 1停用）',
+    remark            varchar(500)    default '' comment '备注',
+    create_by         varchar(64)     default '' comment '创建者',
+    create_time       datetime        default current_timestamp comment '创建时间',
+    update_by         varchar(64)     default '' comment '更新者',
+    update_time       datetime        default null comment '更新时间',
+    primary key (channel_id),
+    unique key uk_ai_c_provider_channel_code (channel_code),
+    key idx_ai_c_provider_channel_provider_id (provider_id)
+) engine=innodb auto_increment=1 comment='AI提供商渠道表';
+
+create table if not exists ai_c_channel_model_relation (
+    relation_id        bigint          not null auto_increment comment '映射ID',
+    channel_id         bigint          not null comment '渠道ID',
+    model_version_id   bigint          not null comment '模型版本ID',
+    remote_model_name  varchar(128)    not null comment '渠道实际模型名',
+    enabled            char(1)         default '0' comment '状态（0启用 1停用）',
+    price_ratio        decimal(10,4)   default 1.0000 comment '价格系数',
+    priority           int             default 0 comment '优先级',
+    weight             int             default 100 comment '权重',
+    max_qps            int             default 0 comment '最大QPS',
+    remark             varchar(500)    default '' comment '备注',
+    create_by          varchar(64)     default '' comment '创建者',
+    create_time        datetime        default current_timestamp comment '创建时间',
+    update_by          varchar(64)     default '' comment '更新者',
+    update_time        datetime        default null comment '更新时间',
+    primary key (relation_id),
+    unique key uk_ai_c_channel_model_relation (channel_id, model_version_id),
+    key idx_ai_c_cmr_model_version_id (model_version_id)
+) engine=innodb auto_increment=1 comment='AI渠道模型映射表';
+
 create table if not exists ai_c_model (
     model_id        bigint          not null auto_increment comment '模型ID',
     model_code      varchar(64)     not null comment '模型编码',
     model_name      varchar(64)     not null comment '模型名称',
     model_type      varchar(20)     not null comment '模型类型',
     provider        varchar(32)     default '' comment '服务商',
+    official_provider_id bigint      default null comment '官方提供商ID',
+    capabilities    text            comment '能力标签JSON',
     cover_url       varchar(255)    default '' comment '封面地址',
     intro           varchar(255)    default '' comment '模型简介',
     status          char(1)         default '0' comment '状态（0正常 1停用）',
@@ -78,7 +145,13 @@ create table if not exists ai_c_model_version (
     model_id        bigint          not null comment '模型ID',
     version_code    varchar(64)     not null comment '版本编码',
     version_name    varchar(64)     not null comment '版本名称',
+    api_model_name  varchar(128)    default '' comment '实际请求模型名',
     power_cost      int             default 0 comment '单次消耗算力',
+    context_length  int             default 0 comment '上下文长度',
+    input_price     decimal(10,4)   default 0.0000 comment '输入单价',
+    output_price    decimal(10,4)   default 0.0000 comment '输出单价',
+    speed_level     int             default 0 comment '速度等级',
+    quality_level   int             default 0 comment '质量等级',
     support_ratio   varchar(255)    default '' comment '支持比例(JSON)',
     support_style   text            comment '支持风格(JSON)',
     support_mode    varchar(255)    default '' comment '支持模式',
@@ -252,6 +325,43 @@ create table if not exists ai_c_card_code (
     key idx_ai_c_card_code_package_id (package_id),
     key idx_ai_c_card_code_status (status)
 ) engine=innodb auto_increment=1 comment='卡密表';
+
+alter table ai_c_model add column if not exists official_provider_id bigint default null comment '官方提供商ID';
+alter table ai_c_model add column if not exists capabilities text comment '能力标签JSON';
+alter table ai_c_model_version add column if not exists api_model_name varchar(128) default '' comment '实际请求模型名';
+alter table ai_c_model_version add column if not exists context_length int default 0 comment '上下文长度';
+alter table ai_c_model_version add column if not exists input_price decimal(10,4) default 0.0000 comment '输入单价';
+alter table ai_c_model_version add column if not exists output_price decimal(10,4) default 0.0000 comment '输出单价';
+alter table ai_c_model_version add column if not exists speed_level int default 0 comment '速度等级';
+alter table ai_c_model_version add column if not exists quality_level int default 0 comment '质量等级';
+alter table ai_c_task add column if not exists channel_id bigint default null comment '渠道ID';
+alter table ai_c_task add column if not exists channel_model_relation_id bigint default null comment '渠道模型映射ID';
+alter table ai_c_task add column if not exists remote_model_name varchar(128) default '' comment '渠道实际模型名';
+alter table ai_c_channel_model_relation add column if not exists remote_model_name varchar(128) not null comment '渠道实际模型名';
+alter table ai_c_channel_model_relation add column if not exists enabled char(1) default '0' comment '状态（0启用 1停用）';
+alter table ai_c_channel_model_relation add column if not exists price_ratio decimal(10,4) default 1.0000 comment '价格系数';
+alter table ai_c_channel_model_relation add column if not exists priority int default 0 comment '优先级';
+alter table ai_c_channel_model_relation add column if not exists weight int default 100 comment '权重';
+alter table ai_c_channel_model_relation add column if not exists max_qps int default 0 comment '最大QPS';
+alter table ai_c_channel_model_relation add column if not exists remark varchar(500) default '' comment '备注';
+alter table ai_c_channel_model_relation add column if not exists create_by varchar(64) default '' comment '创建者';
+alter table ai_c_channel_model_relation add column if not exists create_time datetime default current_timestamp comment '创建时间';
+alter table ai_c_channel_model_relation add column if not exists update_by varchar(64) default '' comment '更新者';
+alter table ai_c_channel_model_relation add column if not exists update_time datetime default null comment '更新时间';
+
+insert into ai_c_provider (provider_id, provider_name, provider_code, provider_type, status, create_by, remark)
+values
+    (1, '字节跳动', 'BYTEDANCE', 'OFFICIAL', '0', 'admin', '即梦等模型官方提供商'),
+    (2, '阿里云', 'ALIBABA', 'OFFICIAL', '0', 'admin', '通义系列官方提供商'),
+    (3, '快手', 'KUAISHOU', 'OFFICIAL', '0', 'admin', '可灵模型官方提供商'),
+    (4, 'OpenAI', 'OPENAI', 'OFFICIAL', '0', 'admin', 'OpenAI 官方提供商'),
+    (5, 'Anthropic', 'ANTHROPIC', 'OFFICIAL', '0', 'admin', 'Anthropic 官方提供商')
+on duplicate key update provider_name = values(provider_name), provider_type = values(provider_type), status = values(status), remark = values(remark);
+
+update ai_c_model m
+left join ai_c_provider p on p.provider_code = m.provider
+set m.official_provider_id = p.provider_id
+where m.official_provider_id is null and m.provider is not null and m.provider <> '';
 
 insert into ai_c_model (model_id, model_code, model_name, model_type, provider, intro, status, sort, create_by)
 values

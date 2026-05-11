@@ -6,6 +6,7 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.uuid.IdUtils;
 import com.ruoyi.system.domain.AiModel;
 import com.ruoyi.system.domain.AiModelVersion;
+import com.ruoyi.system.domain.AiChannelModelRelation;
 import com.ruoyi.system.domain.AiTask;
 import com.ruoyi.system.domain.AiTaskResult;
 import com.ruoyi.system.domain.vo.AdminTaskHandleBo;
@@ -15,6 +16,7 @@ import com.ruoyi.system.mapper.AiTaskResultMapper;
 import com.ruoyi.system.mapper.AiWalletFlowMapper;
 import com.ruoyi.system.service.IAiModelService;
 import com.ruoyi.system.service.IAiModelVersionService;
+import com.ruoyi.system.service.IAiChannelModelRelationService;
 import com.ruoyi.system.service.IAiTaskService;
 import com.ruoyi.system.service.IAiWalletService;
 import java.util.Date;
@@ -46,6 +48,9 @@ public class AiTaskServiceImpl implements IAiTaskService
 
     @Autowired
     private IAiModelVersionService aiModelVersionService;
+
+    @Autowired
+    private IAiChannelModelRelationService aiChannelModelRelationService;
 
     @Autowired
     private IAiWalletService aiWalletService;
@@ -94,6 +99,12 @@ public class AiTaskServiceImpl implements IAiTaskService
     }
 
     @Override
+    public boolean hasTaskRefunded(Long taskId)
+    {
+        return hasRefunded(taskId);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public AiTask submitImageTask(AppImageTaskSubmitBo bo)
     {
@@ -111,6 +122,7 @@ public class AiTaskServiceImpl implements IAiTaskService
         {
             throw new ServiceException("模型和版本不匹配");
         }
+        AiChannelModelRelation route = resolveChannelModelRelation(version.getVersionId());
 
         AiTask task = new AiTask();
         Long userId = bo.getUserId() == null ? 1L : bo.getUserId();
@@ -127,11 +139,31 @@ public class AiTaskServiceImpl implements IAiTaskService
         task.setSourceUrl(bo.getSourceUrl());
         task.setStatus("PENDING");
         task.setPowerCost(version.getPowerCost());
+        if (route != null)
+        {
+            task.setChannelId(route.getChannelId());
+            task.setChannelModelRelationId(route.getRelationId());
+            task.setRemoteModelName(route.getRemoteModelName());
+            task.setRemark("任务已创建，已匹配渠道路由：" + StringUtils.defaultIfBlank(route.getChannelName(), "未命名渠道"));
+        }
+        else
+        {
+            task.setRemoteModelName(StringUtils.defaultIfBlank(version.getApiModelName(), version.getVersionCode()));
+            task.setRemark("任务已创建，待接入实际模型执行器");
+        }
         task.setSubmitTime(DateUtils.getNowDate());
-        task.setRemark("任务已创建，待接入实际模型执行器");
         aiTaskMapper.insertAiTask(task);
         aiWalletService.consumePower(userId, version.getPowerCost(), "TASK_SUBMIT", task.getTaskId(), "提交图片生成任务扣减算力");
         return aiTaskMapper.selectAiTaskById(task.getTaskId());
+    }
+
+    private AiChannelModelRelation resolveChannelModelRelation(Long versionId)
+    {
+        AiChannelModelRelation query = new AiChannelModelRelation();
+        query.setModelVersionId(versionId);
+        query.setEnabled("0");
+        List<AiChannelModelRelation> relationList = aiChannelModelRelationService.selectAiChannelModelRelationList(query);
+        return relationList.isEmpty() ? null : relationList.get(0);
     }
 
     @Override

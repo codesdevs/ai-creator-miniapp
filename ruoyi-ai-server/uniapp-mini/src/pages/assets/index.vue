@@ -62,8 +62,40 @@
         </view>
       </view>
 
-      <button class="recharge-btn" :disabled="submitting || !selectedPackageId" @tap="handleRecharge">
+      <view class="pay-config-wrap">
+        <text class="pay-config-title">支付渠道</text>
+        <view v-if="payConfigLoading" class="state compact">支付渠道加载中...</view>
+        <view v-else-if="payConfigErrorMessage" class="state compact error">{{ payConfigErrorMessage }}</view>
+        <view v-else-if="!payConfigList.length" class="state compact">暂无可用支付渠道</view>
+        <view v-else class="pay-config-list">
+          <view
+            v-for="item in payConfigList"
+            :key="item.payConfigId"
+            :class="['pay-config-item', selectedPayConfigId === item.payConfigId ? 'active' : '']"
+            @tap="selectedPayConfigId = item.payConfigId"
+          >
+            <text class="pay-config-name">{{ item.configName }}</text>
+            <text class="pay-config-desc">{{ item.payChannel || item.configCode }}</text>
+          </view>
+        </view>
+      </view>
+
+      <button class="recharge-btn" :disabled="submitting || !selectedPackageId || !selectedPayConfigId" @tap="handleRecharge">
         {{ submitting ? '提交中...' : '创建充值订单' }}
+      </button>
+    </view>
+
+    <view class="action-card">
+      <view class="action-head">
+        <view>
+          <text class="action-title">卡密兑换</text>
+          <text class="action-desc">输入后台生成的卡密后，系统会直接给当前账号充值算力。</text>
+        </view>
+        <text class="action-badge">REDEEM</text>
+      </view>
+      <input v-model="redeemCode" class="redeem-input" placeholder="请输入卡密" placeholder-class="input-placeholder" />
+      <button class="recharge-btn" :disabled="redeeming || !redeemCode.trim()" @tap="handleRedeem">
+        {{ redeeming ? '兑换中...' : '立即兑换' }}
       </button>
     </view>
 
@@ -80,7 +112,7 @@
         <text class="empty-desc">选中套餐后创建第一笔充值订单。</text>
       </view>
       <view v-else class="flow-list">
-        <view v-for="item in orderList" :key="item.orderId" class="flow-item">
+        <view v-for="item in orderList" :key="item.orderId" class="flow-item order-item" @tap="openOrderDetail(item.orderId)">
           <view class="flow-main">
             <view>
               <text class="biz">{{ item.packageName || '充值订单' }}</text>
@@ -94,6 +126,11 @@
           <view class="flow-foot">
             <text>{{ item.createTime }}</text>
             <text>¥{{ item.payAmount || 0 }}</text>
+          </view>
+          <view class="order-actions">
+            <text class="order-link">查看详情</text>
+            <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link warn" @tap.stop="showPayGuide(item.orderId)">支付指引</text>
+            <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link danger" @tap.stop="handleCancelOrder(item.orderId)">取消订单</text>
           </view>
         </view>
       </view>
@@ -141,28 +178,91 @@
         </view>
       </view>
     </view>
+
+    <view v-if="orderDetailOpen" class="popup-mask" @tap="closeOrderDetail">
+      <view class="popup-card" @tap.stop>
+        <view class="popup-head">
+          <text class="popup-title">订单详情</text>
+          <text class="popup-close" @tap="closeOrderDetail">关闭</text>
+        </view>
+        <view v-if="orderDetailLoading" class="state">详情加载中...</view>
+        <view v-else-if="!orderDetail.orderId" class="state">暂无订单详情</view>
+        <view v-else class="detail-list">
+          <view class="detail-row">
+            <text class="detail-label">订单编号</text>
+            <text class="detail-value">{{ orderDetail.orderNo || '-' }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-label">订单状态</text>
+            <text :class="orderStatusClass(orderDetail.orderStatus)">{{ formatOrderStatus(orderDetail.orderStatus) }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-label">套餐名称</text>
+            <text class="detail-value">{{ orderDetail.packageName || '-' }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-label">支付渠道</text>
+            <text class="detail-value">{{ orderDetail.payChannel || '-' }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-label">支付金额</text>
+            <text class="detail-value">¥{{ orderDetail.payAmount || 0 }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-label">到账算力</text>
+            <text class="detail-value">+{{ (orderDetail.powerNum || 0) + (orderDetail.bonusPowerNum || 0) }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-label">支付时间</text>
+            <text class="detail-value">{{ orderDetail.payTime || '-' }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-label">创建时间</text>
+            <text class="detail-value">{{ orderDetail.createTime || '-' }}</text>
+          </view>
+          <view class="detail-row column">
+            <text class="detail-label">备注</text>
+            <text class="detail-value block">{{ orderDetail.remark || '-' }}</text>
+          </view>
+        </view>
+        <view v-if="orderDetail.orderStatus === 'WAIT_PAY'" class="popup-actions">
+          <button class="popup-btn secondary" @tap="showPayGuide(orderDetail.orderId)">支付指引</button>
+          <button class="popup-btn danger" @tap="handleCancelOrder(orderDetail.orderId)">取消订单</button>
+        </view>
+      </view>
+    </view>
   </scroll-view>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getMyRechargeOrderList, getRechargePackageList, submitRechargeOrder } from '@/api/order'
+import { redeemCardCode } from '@/api/cardCode'
+import { cancelRechargeOrder, getMyRechargeOrderList, getPayConfigList, getRechargeOrderDetail, getRechargePackageList, submitRechargeOrder } from '@/api/order'
 import { getWalletFlows, getWalletInfo } from '@/api/wallet'
 import { requireLogin } from '@/utils/auth'
 
 const wallet = ref({})
 const flows = ref([])
 const packageList = ref([])
+const payConfigList = ref([])
 const orderList = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
 const packageLoading = ref(false)
 const packageErrorMessage = ref('')
+const payConfigLoading = ref(false)
+const payConfigErrorMessage = ref('')
 const orderLoading = ref(false)
 const orderErrorMessage = ref('')
+const orderDetailOpen = ref(false)
+const orderDetailLoading = ref(false)
+const orderDetail = ref({})
 const selectedPackageId = ref()
+const selectedPayConfigId = ref()
 const submitting = ref(false)
+const redeemCode = ref('')
+const redeeming = ref(false)
 const activeFilter = ref('ALL')
 
 const filters = [
@@ -185,7 +285,8 @@ function flowTitle(item) {
     TASK_SUBMIT: '提交创作任务',
     TASK_REFUND: '任务失败退款',
     ADMIN_GRANT: '后台赠送算力',
-    ORDER_RECHARGE: '充值订单到账'
+    ORDER_RECHARGE: '充值订单到账',
+    CARD_CODE_REDEEM: '卡密兑换到账'
   }
   return map[item.bizType] || item.bizType || '算力变动'
 }
@@ -218,6 +319,82 @@ function orderStatusClass(status) {
   return 'status'
 }
 
+async function fetchOrderDetail(orderId) {
+  orderDetailLoading.value = true
+  try {
+    const res = await getRechargeOrderDetail(orderId)
+    orderDetail.value = res.data || {}
+    return res
+  } finally {
+    orderDetailLoading.value = false
+  }
+}
+
+async function openOrderDetail(orderId) {
+  if (!requireLogin()) {
+    return
+  }
+  orderDetailOpen.value = true
+  orderDetail.value = {}
+  try {
+    await fetchOrderDetail(orderId)
+  } catch (error) {
+    uni.showToast({
+      title: error.message || '详情加载失败',
+      icon: 'none'
+    })
+  }
+}
+
+function closeOrderDetail() {
+  orderDetailOpen.value = false
+}
+
+async function showPayGuide(orderId) {
+  try {
+    const res = await fetchOrderDetail(orderId)
+    const detail = res.data || {}
+    uni.showModal({
+      title: '支付指引',
+      content: `${res.payTip || '当前为开发阶段，请在后台手动处理订单。'}\n订单号：${detail.orderNo || '-'}\n金额：¥${detail.payAmount || 0}`,
+      showCancel: false
+    })
+  } catch (error) {
+    uni.showToast({
+      title: error.message || '获取支付指引失败',
+      icon: 'none'
+    })
+  }
+}
+
+async function handleCancelOrder(orderId) {
+  uni.showModal({
+    title: '取消订单',
+    content: '确认取消这笔待支付订单吗？',
+    success: async ({ confirm }) => {
+      if (!confirm) {
+        return
+      }
+      try {
+        await cancelRechargeOrder(orderId)
+        uni.showToast({
+          title: '订单已取消',
+          icon: 'none'
+        })
+        await loadOrders()
+        if (orderDetailOpen.value && orderDetail.value.orderId === orderId) {
+          await fetchOrderDetail(orderId)
+        }
+      } catch (error) {
+        uni.showToast({
+          title: error.message || '取消失败',
+          icon: 'none'
+        })
+      }
+    }
+  })
+}
+
 async function loadPackages() {
   packageLoading.value = true
   packageErrorMessage.value = ''
@@ -231,6 +408,22 @@ async function loadPackages() {
     packageErrorMessage.value = error.message || '套餐加载失败'
   } finally {
     packageLoading.value = false
+  }
+}
+
+async function loadPayConfigs() {
+  payConfigLoading.value = true
+  payConfigErrorMessage.value = ''
+  try {
+    const res = await getPayConfigList()
+    payConfigList.value = res.data || []
+    if (!selectedPayConfigId.value && payConfigList.value.length) {
+      selectedPayConfigId.value = payConfigList.value[0].payConfigId
+    }
+  } catch (error) {
+    payConfigErrorMessage.value = error.message || '支付渠道加载失败'
+  } finally {
+    payConfigLoading.value = false
   }
 }
 
@@ -248,15 +441,15 @@ async function loadOrders() {
 }
 
 async function handleRecharge() {
-  if (!requireLogin() || !selectedPackageId.value || submitting.value) {
+  if (!requireLogin() || !selectedPackageId.value || !selectedPayConfigId.value || submitting.value) {
     return
   }
   submitting.value = true
   try {
-    const res = await submitRechargeOrder({ packageId: selectedPackageId.value })
+    const res = await submitRechargeOrder({ packageId: selectedPackageId.value, payConfigId: selectedPayConfigId.value })
     uni.showModal({
       title: '订单已创建',
-      content: `${res.payTip}\n订单号：${res.order?.orderNo || '-'}`,
+      content: `${res.payTip}\n订单号：${res.order?.orderNo || '-'}\n支付渠道：${res.order?.payChannel || '-'}`,
       showCancel: false
     })
     await Promise.all([loadOrders(), loadData()])
@@ -267,6 +460,30 @@ async function handleRecharge() {
     })
   } finally {
     submitting.value = false
+  }
+}
+
+async function handleRedeem() {
+  if (!requireLogin() || redeeming.value || !redeemCode.value.trim()) {
+    return
+  }
+  redeeming.value = true
+  try {
+    const res = await redeemCardCode({ cardCode: redeemCode.value.trim() })
+    redeemCode.value = ''
+    uni.showModal({
+      title: '兑换成功',
+      content: `卡密 ${res.cardCode?.cardCode || '-'} 已到账`,
+      showCancel: false
+    })
+    await Promise.all([loadData(), loadOrders()])
+  } catch (error) {
+    uni.showToast({
+      title: error.message || '兑换失败',
+      icon: 'none'
+    })
+  } finally {
+    redeeming.value = false
   }
 }
 
@@ -292,12 +509,13 @@ async function loadData() {
 }
 
 async function initializePage() {
-  await loadPackages()
+  await Promise.all([loadPackages(), loadPayConfigs()])
   if (requireLogin()) {
     await Promise.all([loadData(), loadOrders()])
   } else {
     wallet.value = {}
     flows.value = []
+    payConfigList.value = []
     orderList.value = []
   }
 }
@@ -478,6 +696,62 @@ onShow(initializePage)
   line-height: 1.6;
 }
 
+.pay-config-wrap {
+  margin-top: 24rpx;
+}
+
+.pay-config-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.pay-config-list {
+  display: grid;
+  gap: 14rpx;
+  margin-top: 16rpx;
+}
+
+.pay-config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.pay-config-item.active {
+  border-color: rgba(126, 168, 255, 0.7);
+  box-shadow: 0 0 0 2rpx rgba(126, 168, 255, 0.12) inset;
+}
+
+.pay-config-name {
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.pay-config-desc {
+  color: #93a4d9;
+  font-size: 22rpx;
+}
+
+.redeem-input {
+  margin-top: 20rpx;
+  height: 84rpx;
+  padding: 0 24rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  box-sizing: border-box;
+}
+
+.input-placeholder {
+  color: #7785b7;
+}
+
 .recharge-btn {
   margin-top: 20rpx;
   height: 84rpx;
@@ -538,6 +812,10 @@ onShow(initializePage)
 .flow-item {
   padding: 22rpx;
   background: #181e36;
+}
+
+.order-item {
+  cursor: pointer;
 }
 
 .biz {
@@ -603,6 +881,26 @@ onShow(initializePage)
   flex-wrap: wrap;
 }
 
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24rpx;
+  margin-top: 18rpx;
+}
+
+.order-link {
+  color: #7ea8ff;
+  font-size: 24rpx;
+}
+
+.order-link.warn {
+  color: #efb44e;
+}
+
+.order-link.danger {
+  color: #ff9797;
+}
+
 .empty-card {
   margin-top: 18rpx;
   padding: 28rpx;
@@ -629,7 +927,103 @@ onShow(initializePage)
   font-size: 26rpx;
 }
 
+.state.compact {
+  padding: 18rpx 0 0;
+  font-size: 22rpx;
+}
+
 .error {
   color: #ff9797;
+}
+
+.popup-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(7, 10, 20, 0.7);
+}
+
+.popup-card {
+  width: 100%;
+  padding: 28rpx 24rpx calc(28rpx + env(safe-area-inset-bottom));
+  border-radius: 28rpx 28rpx 0 0;
+  background: #161c32;
+  box-sizing: border-box;
+}
+
+.popup-head,
+.detail-row,
+.popup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.popup-title {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.popup-close {
+  color: #95a6db;
+  font-size: 24rpx;
+}
+
+.detail-list {
+  margin-top: 20rpx;
+}
+
+.detail-row {
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.06);
+}
+
+.detail-row.column {
+  display: block;
+}
+
+.detail-label {
+  color: #92a2d6;
+  font-size: 24rpx;
+}
+
+.detail-value {
+  color: #fff;
+  font-size: 25rpx;
+  text-align: right;
+}
+
+.detail-value.block {
+  display: block;
+  margin-top: 12rpx;
+  text-align: left;
+  line-height: 1.7;
+}
+
+.popup-actions {
+  margin-top: 24rpx;
+}
+
+.popup-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  border: none;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.popup-btn.secondary {
+  background: rgba(126, 168, 255, 0.16);
+  color: #9ec0ff;
+}
+
+.popup-btn.danger {
+  background: rgba(255, 132, 132, 0.16);
+  color: #ffb0b0;
 }
 </style>

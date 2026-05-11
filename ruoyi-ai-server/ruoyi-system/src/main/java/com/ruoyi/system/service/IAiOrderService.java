@@ -12,11 +12,15 @@ public interface IAiOrderService
 
     public List<AiOrder> selectUserOrderList(Long userId);
 
+    public AiOrder selectUserOrderById(Long userId, Long orderId);
+
     public int insertAiOrder(AiOrder aiOrder);
 
     public int updateAiOrder(AiOrder aiOrder);
 
     public AiOrder createRechargeOrder(Long userId, Long packageId, Long payConfigId);
+
+    public AiOrder cancelUserOrder(Long userId, Long orderId);
 
     public AiOrder adminHandleOrder(AdminOrderHandleBo bo);
 }

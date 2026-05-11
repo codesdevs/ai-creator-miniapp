@@ -15,6 +15,15 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="实际模型名" prop="apiModelName">
+        <el-input
+          v-model="queryParams.apiModelName"
+          placeholder="请输入实际模型名"
+          clearable
+          style="width: 220px"
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择状态" clearable style="width: 200px">
           <el-option label="正常" value="0" />
@@ -46,7 +55,11 @@
       <el-table-column label="所属模型" align="center" prop="modelName" min-width="140" />
       <el-table-column label="版本名称" align="center" prop="versionName" min-width="140" />
       <el-table-column label="版本编码" align="center" prop="versionCode" min-width="140" />
+      <el-table-column label="实际模型名" align="center" prop="apiModelName" min-width="160" :show-overflow-tooltip="true" />
       <el-table-column label="消耗算力" align="center" prop="powerCost" width="100" />
+      <el-table-column label="上下文" align="center" prop="contextLength" width="100" />
+      <el-table-column label="输入单价" align="center" prop="inputPrice" width="100" />
+      <el-table-column label="输出单价" align="center" prop="outputPrice" width="100" />
       <el-table-column label="支持模式" align="center" prop="supportMode" min-width="180" :show-overflow-tooltip="true" />
       <el-table-column label="状态" align="center" prop="status" width="90">
         <template #default="scope">
@@ -93,8 +106,38 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="实际模型名" prop="apiModelName">
+              <el-input v-model="form.apiModelName" placeholder="请输入实际请求模型名" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="消耗算力" prop="powerCost">
               <el-input-number v-model="form.powerCost" :min="0" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="上下文长度" prop="contextLength">
+              <el-input-number v-model="form.contextLength" :min="0" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="输入单价" prop="inputPrice">
+              <el-input-number v-model="form.inputPrice" :min="0" :precision="4" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="输出单价" prop="outputPrice">
+              <el-input-number v-model="form.outputPrice" :min="0" :precision="4" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="速度等级" prop="speedLevel">
+              <el-input-number v-model="form.speedLevel" :min="0" :max="10" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="质量等级" prop="qualityLevel">
+              <el-input-number v-model="form.qualityLevel" :min="0" :max="10" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -166,6 +209,7 @@ const data = reactive({
     pageSize: 10,
     modelId: undefined,
     versionName: undefined,
+    apiModelName: undefined,
     status: undefined
   },
   rules: {
@@ -203,7 +247,13 @@ function reset() {
     modelId: undefined,
     versionName: undefined,
     versionCode: undefined,
+    apiModelName: undefined,
     powerCost: 0,
+    contextLength: 0,
+    inputPrice: 0,
+    outputPrice: 0,
+    speedLevel: 0,
+    qualityLevel: 0,
     supportRatio: undefined,
     supportStyle: undefined,
     supportMode: undefined,

@@ -15,6 +15,7 @@
       <view v-if="task.failReason" class="fail-box">
         <text class="fail-label">失败原因</text>
         <text class="fail-text">{{ task.failReason }}</text>
+        <text class="refund-text">{{ refunded ? '本次失败任务对应算力已退回。' : '退款处理中，请稍后刷新查看。' }}</text>
       </view>
     </view>
 
@@ -71,6 +72,7 @@
             class="result-image"
             :src="item.coverUrl || item.fileUrl"
             mode="aspectFill"
+            @tap="previewResult(item)"
           />
           <view class="result-meta">
             <text class="result-type">{{ item.resultType || 'IMAGE' }}</text>
@@ -79,6 +81,11 @@
             </text>
           </view>
           <text class="result-url">{{ item.fileUrl || '-' }}</text>
+          <view class="result-actions">
+            <text class="result-link" @tap="previewResult(item)">预览大图</text>
+            <text class="result-link" @tap="saveResult(item)">保存图片</text>
+            <text class="result-link primary" @tap="createAgain">再次创作</text>
+          </view>
         </view>
       </view>
     </view>
@@ -102,6 +109,7 @@ const results = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
 const polling = ref(false)
+const refunded = ref(false)
 let pollTimer = null
 
 const emptyTitle = computed(() => {
@@ -191,6 +199,7 @@ async function loadTask(showLoading = true) {
     const res = await getTaskDetail(taskId.value)
     task.value = res.task || null
     results.value = res.resultList || []
+    refunded.value = !!res.refunded
     schedulePolling()
   } catch (error) {
     clearPolling()
@@ -209,7 +218,55 @@ function createAgain() {
     return
   }
   uni.navigateTo({
-    url: `/pages/create/image?modelId=${task.value.modelId}`
+    url: `/pages/create/image?modelId=${task.value.modelId}&sourceTaskId=${task.value.taskId}`
+  })
+}
+
+function previewResult(item) {
+  const current = item?.fileUrl || item?.coverUrl
+  const urls = results.value
+    .map((result) => result.fileUrl || result.coverUrl)
+    .filter(Boolean)
+  if (!current || !urls.length) {
+    return
+  }
+  uni.previewImage({
+    current,
+    urls
+  })
+}
+
+function saveResult(item) {
+  const url = item?.fileUrl || item?.coverUrl
+  if (!url) {
+    uni.showToast({ title: '当前图片不可保存', icon: 'none' })
+    return
+  }
+  uni.showLoading({ title: '保存中...' })
+  uni.downloadFile({
+    url,
+    success: (downloadRes) => {
+      if (downloadRes.statusCode !== 200 || !downloadRes.tempFilePath) {
+        uni.hideLoading()
+        uni.showToast({ title: '下载失败', icon: 'none' })
+        return
+      }
+      uni.saveImageToPhotosAlbum({
+        filePath: downloadRes.tempFilePath,
+        success: () => {
+          uni.hideLoading()
+          uni.showToast({ title: '已保存到相册', icon: 'none' })
+        },
+        fail: () => {
+          uni.hideLoading()
+          uni.showToast({ title: '保存失败，请检查相册权限', icon: 'none' })
+        }
+      })
+    },
+    fail: () => {
+      uni.hideLoading()
+      uni.showToast({ title: '下载失败', icon: 'none' })
+    }
   })
 }
 
@@ -336,6 +393,14 @@ onUnload(() => {
   line-height: 1.6;
 }
 
+.refund-text {
+  display: block;
+  margin-top: 12rpx;
+  color: #ffdf9d;
+  font-size: 23rpx;
+  line-height: 1.6;
+}
+
 .info-card,
 .prompt-card,
 .section,
@@ -433,6 +498,22 @@ onUnload(() => {
   font-size: 22rpx;
   line-height: 1.6;
   word-break: break-all;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24rpx;
+  padding: 0 24rpx 24rpx;
+}
+
+.result-link {
+  color: #9fb0ef;
+  font-size: 23rpx;
+}
+
+.result-link.primary {
+  color: #7ea8ff;
 }
 
 .empty-title {

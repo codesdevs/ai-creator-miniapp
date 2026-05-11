@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiWalletMapper">
+
+    <resultMap type="AiWallet" id="AiWalletResult">
+        <result property="walletId" column="wallet_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="balancePower" column="balance_power"/>
+        <result property="freezePower" column="freeze_power"/>
+        <result property="totalRechargePower" column="total_recharge_power"/>
+        <result property="totalConsumePower" column="total_consume_power"/>
+        <result property="totalGivePower" column="total_give_power"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="selectAiWalletByUserId" parameterType="Long" resultMap="AiWalletResult">
+        select wallet_id, user_id, balance_power, freeze_power, total_recharge_power, total_consume_power, total_give_power, update_time
+        from ai_c_wallet
+        where user_id = #{userId}
+    </select>
+
+    <insert id="insertAiWallet" parameterType="AiWallet" useGeneratedKeys="true" keyProperty="walletId">
+        insert into ai_c_wallet (user_id, balance_power, freeze_power, total_recharge_power, total_consume_power, total_give_power, update_time)
+        values (#{userId}, #{balancePower}, #{freezePower}, #{totalRechargePower}, #{totalConsumePower}, #{totalGivePower}, sysdate())
+    </insert>
+
+    <update id="updateAiWallet" parameterType="AiWallet">
+        update ai_c_wallet
+        set balance_power = #{balancePower},
+            freeze_power = #{freezePower},
+            total_recharge_power = #{totalRechargePower},
+            total_consume_power = #{totalConsumePower},
+            total_give_power = #{totalGivePower},
+            update_time = sysdate()
+        where wallet_id = #{walletId}
+    </update>
+</mapper>

@@ -18,6 +18,14 @@ select 2002, '模型版本', 2000, '2', 'modelVersion', 'ai/modelVersion/index',
 where not exists (select 1 from sys_menu where menu_id = 2002);
 
 insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2003, '任务管理', 2000, '3', 'task', 'ai/task/index', '', '', 1, 0, 'C', '0', '0', 'ai:task:list', 'job', 'admin', sysdate(), '', null, 'AI任务管理菜单'
+where not exists (select 1 from sys_menu where menu_id = 2003);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2004, '算力流水', 2000, '4', 'wallet', 'ai/wallet/index', '', '', 1, 0, 'C', '0', '0', 'ai:wallet:list', 'money', 'admin', sysdate(), '', null, 'AI算力流水菜单'
+where not exists (select 1 from sys_menu where menu_id = 2004);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
 select 2100, '模型查询', 2001, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:model:query', '#', 'admin', sysdate(), '', null, ''
 where not exists (select 1 from sys_menu where menu_id = 2100);
 
@@ -49,6 +57,18 @@ insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component,
 select 2203, '版本删除', 2002, '4', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:modelVersion:remove', '#', 'admin', sysdate(), '', null, ''
 where not exists (select 1 from sys_menu where menu_id = 2203);
 
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2300, '任务查询', 2003, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:task:query', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2300);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2400, '流水查询', 2004, '1', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:wallet:list', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2400);
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select 2401, '赠送算力', 2004, '2', '#', '', '', '', 1, 0, 'F', '0', '0', 'ai:wallet:grant', '#', 'admin', sysdate(), '', null, ''
+where not exists (select 1 from sys_menu where menu_id = 2401);
+
 -- 给测试角色补菜单，管理员角色默认拥有全部菜单，无需关联
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2000 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2000);
@@ -56,6 +76,10 @@ insert into sys_role_menu (role_id, menu_id)
 select 2, 2001 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2001);
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2002 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2002);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2003 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2003);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2004 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2004);
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2100 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2100);
 insert into sys_role_menu (role_id, menu_id)
@@ -72,6 +96,12 @@ insert into sys_role_menu (role_id, menu_id)
 select 2, 2202 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2202);
 insert into sys_role_menu (role_id, menu_id)
 select 2, 2203 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2203);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2300 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2300);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2400 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2400);
+insert into sys_role_menu (role_id, menu_id)
+select 2, 2401 where not exists (select 1 from sys_role_menu where role_id = 2 and menu_id = 2401);
 
 -- ----------------------------
 -- 2、字典类型初始化

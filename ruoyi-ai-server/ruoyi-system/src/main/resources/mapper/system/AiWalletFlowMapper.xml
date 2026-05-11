@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiWalletFlowMapper">
+
+    <resultMap type="AiWalletFlow" id="AiWalletFlowResult">
+        <result property="flowId" column="flow_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bizType" column="biz_type"/>
+        <result property="bizId" column="biz_id"/>
+        <result property="changeType" column="change_type"/>
+        <result property="powerNum" column="power_num"/>
+        <result property="beforeBalance" column="before_balance"/>
+        <result property="afterBalance" column="after_balance"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="selectAiWalletFlowList" parameterType="AiWalletFlow" resultMap="AiWalletFlowResult">
+        select flow_id, user_id, biz_type, biz_id, change_type, power_num, before_balance, after_balance, remark, create_time
+        from ai_c_wallet_flow
+        <where>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="bizType != null and bizType != ''">and biz_type = #{bizType}</if>
+            <if test="changeType != null and changeType != ''">and change_type = #{changeType}</if>
+        </where>
+        order by flow_id desc
+    </select>
+
+    <insert id="insertAiWalletFlow" parameterType="AiWalletFlow" useGeneratedKeys="true" keyProperty="flowId">
+        insert into ai_c_wallet_flow (user_id, biz_type, biz_id, change_type, power_num, before_balance, after_balance, remark, create_time)
+        values (#{userId}, #{bizType}, #{bizId}, #{changeType}, #{powerNum}, #{beforeBalance}, #{afterBalance}, #{remark}, sysdate())
+    </insert>
+</mapper>

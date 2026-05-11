@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiCardCodeMapper">
+    <resultMap type="AiCardCode" id="AiCardCodeResult">
+        <result property="cardCodeId" column="card_code_id"/>
+        <result property="packageId" column="package_id"/>
+        <result property="packageName" column="package_name"/>
+        <result property="cardCode" column="card_code"/>
+        <result property="powerNum" column="power_num"/>
+        <result property="bonusPowerNum" column="bonus_power_num"/>
+        <result property="status" column="status"/>
+        <result property="usedUserId" column="used_user_id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="usedTime" column="used_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="userNo" column="user_no"/>
+        <result property="nickName" column="nick_name"/>
+    </resultMap>
+
+    <select id="selectAiCardCodeById" resultMap="AiCardCodeResult">
+        select c.*, u.user_no, u.nick_name
+        from ai_c_card_code c
+        left join ai_c_user u on u.user_id = c.used_user_id
+        where c.card_code_id = #{cardCodeId}
+    </select>
+
+    <select id="selectAiCardCodeList" resultMap="AiCardCodeResult">
+        select c.*, u.user_no, u.nick_name
+        from ai_c_card_code c
+        left join ai_c_user u on u.user_id = c.used_user_id
+        <where>
+            <if test="packageId != null">and c.package_id = #{packageId}</if>
+            <if test="packageName != null and packageName != ''">and c.package_name like concat('%', #{packageName}, '%')</if>
+            <if test="cardCode != null and cardCode != ''">and c.card_code like concat('%', #{cardCode}, '%')</if>
+            <if test="status != null and status != ''">and c.status = #{status}</if>
+        </where>
+        order by c.card_code_id desc
+    </select>
+
+    <insert id="insertAiCardCode" parameterType="AiCardCode" useGeneratedKeys="true" keyProperty="cardCodeId">
+        insert into ai_c_card_code
+        (package_id, package_name, card_code, power_num, bonus_power_num, status, used_user_id, order_id, used_time, create_by, create_time, remark)
+        values
+        (#{packageId}, #{packageName}, #{cardCode}, #{powerNum}, #{bonusPowerNum}, #{status}, #{usedUserId}, #{orderId}, #{usedTime}, #{createBy}, #{createTime}, #{remark})
+    </insert>
+
+    <insert id="batchInsertAiCardCode">
+        insert into ai_c_card_code
+        (package_id, package_name, card_code, power_num, bonus_power_num, status, create_time, remark)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.packageId}, #{item.packageName}, #{item.cardCode}, #{item.powerNum}, #{item.bonusPowerNum}, #{item.status}, #{item.createTime}, #{item.remark})
+        </foreach>
+    </insert>
+
+    <delete id="deleteAiCardCodeByIds">
+        delete from ai_c_card_code where card_code_id in
+        <foreach collection="array" item="cardCodeId" open="(" separator="," close=")">
+            #{cardCodeId}
+        </foreach>
+    </delete>
+</mapper>

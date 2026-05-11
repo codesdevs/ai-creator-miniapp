@@ -231,6 +231,28 @@ create table if not exists ai_c_order (
     key idx_ai_c_order_status (order_status)
 ) engine=innodb auto_increment=1 comment='充值订单表';
 
+create table if not exists ai_c_card_code (
+    card_code_id          bigint          not null auto_increment comment '卡密ID',
+    package_id            bigint          not null comment '卡包ID',
+    package_name          varchar(64)     default '' comment '卡包名称',
+    card_code             varchar(64)     not null comment '卡密编码',
+    power_num             int             default 0 comment '基础算力',
+    bonus_power_num       int             default 0 comment '赠送算力',
+    status                char(1)         default '0' comment '状态（0未使用 1已使用 2停用）',
+    used_user_id          bigint          default null comment '使用用户ID',
+    order_id              bigint          default null comment '关联订单ID',
+    used_time             datetime        default null comment '使用时间',
+    create_by             varchar(64)     default '' comment '创建者',
+    create_time           datetime        default current_timestamp comment '创建时间',
+    update_by             varchar(64)     default '' comment '更新者',
+    update_time           datetime        default null comment '更新时间',
+    remark                varchar(500)    default '' comment '备注',
+    primary key (card_code_id),
+    unique key uk_ai_c_card_code_code (card_code),
+    key idx_ai_c_card_code_package_id (package_id),
+    key idx_ai_c_card_code_status (status)
+) engine=innodb auto_increment=1 comment='卡密表';
+
 insert into ai_c_model (model_id, model_code, model_name, model_type, provider, intro, status, sort, create_by)
 values
     (1, 'jimeng', '即梦AI', 'IMAGE', 'BYTEDANCE', '字节跳动图片模型', '0', 1, 'admin'),
@@ -276,3 +298,10 @@ values
     (1, '微信小程序支付', 'WX_MP', 'WECHAT_MP', '', '', '', '0', 1, 'admin', '微信小程序支付占位配置'),
     (2, '支付宝H5支付', 'ALIPAY_H5', 'ALIPAY_H5', '', '', '', '1', 2, 'admin', '支付宝支付占位配置')
 on duplicate key update config_name = values(config_name), pay_channel = values(pay_channel), status = values(status), remark = values(remark);
+
+insert into ai_c_card_code
+    (card_code_id, package_id, package_name, card_code, power_num, bonus_power_num, status, create_by, remark)
+values
+    (1, 1, '新手体验包', 'CKSTARTER000001', 100, 20, '0', 'admin', '示例卡密'),
+    (2, 2, '进阶创作包', 'CKADVANCE000001', 500, 100, '0', 'admin', '示例卡密')
+on duplicate key update package_name = values(package_name), power_num = values(power_num), bonus_power_num = values(bonus_power_num), status = values(status), remark = values(remark);

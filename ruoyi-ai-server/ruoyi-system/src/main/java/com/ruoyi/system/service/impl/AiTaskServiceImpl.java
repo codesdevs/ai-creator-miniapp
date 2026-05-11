@@ -3,6 +3,7 @@ package com.ruoyi.system.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -30,13 +31,18 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.DigestUtils;
 
 /**
  * AI 任务 服务层实现
@@ -53,6 +59,12 @@ public class AiTaskServiceImpl implements IAiTaskService
     private static final long MOCK_FINISH_THRESHOLD_MS = 8_000L;
 
     private static final String PROVIDER_CODE_ZHIPU = "ZHIPU";
+
+    private static final String IMAGE_SUBMIT_IDEMPOTENT_KEY_PREFIX = "ai:task:image:submit:";
+
+    private static final String IMAGE_SUBMIT_IDEMPOTENT_PENDING = "PENDING";
+
+    private static final int IMAGE_SUBMIT_IDEMPOTENT_TTL_SECONDS = 120;
 
     @Autowired
     private AiTaskMapper aiTaskMapper;
@@ -83,6 +95,9 @@ public class AiTaskServiceImpl implements IAiTaskService
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+
+    @Autowired
+    private RedisCache redisCache;
 
     @Override
     public AiTask selectAiTaskById(Long taskId)
@@ -134,62 +149,137 @@ public class AiTaskServiceImpl implements IAiTaskService
     @Transactional(rollbackFor = Exception.class)
     public AiTask submitImageTask(AppImageTaskSubmitBo bo)
     {
-        AiModel model = aiModelService.selectAiModelById(bo.getModelId());
-        if (model == null || !"0".equals(model.getStatus()))
-        {
-            throw new ServiceException("模型不存在或已停用");
-        }
-        AiModelVersion version = aiModelVersionService.selectAiModelVersionById(bo.getVersionId());
-        if (version == null || !"0".equals(version.getStatus()))
-        {
-            throw new ServiceException("模型版本不存在或已停用");
-        }
-        if (!bo.getModelId().equals(version.getModelId()))
-        {
-            throw new ServiceException("模型和版本不匹配");
-        }
-        AiChannelModelRelation route = resolveChannelModelRelation(version.getVersionId());
-
-        AiTask task = new AiTask();
         Long userId = bo.getUserId() == null ? 1L : bo.getUserId();
-        task.setTaskNo("T" + DateUtils.dateTimeNow() + IdUtils.fastSimpleUUID().substring(0, 8).toUpperCase());
-        task.setUserId(userId);
-        task.setModelId(model.getModelId());
-        task.setModelVersionId(version.getVersionId());
-        task.setTaskType("IMAGE");
-        task.setCreateMode(bo.getCreateMode());
-        task.setPromptText(bo.getPromptText());
-        task.setNegativePrompt(bo.getNegativePrompt());
-        task.setStyleCode(bo.getStyleCode());
-        task.setRatioCode(bo.getRatioCode());
-        task.setSourceUrl(bo.getSourceUrl());
-        task.setStatus(route == null ? "PENDING" : "WAITING");
-        task.setPowerCost(version.getPowerCost());
-        if (route != null)
+        String idempotentKey = buildImageSubmitIdempotentKey(userId, bo);
+        AiTask existingTask = getExistingIdempotentTask(idempotentKey);
+        if (existingTask != null)
         {
-            task.setChannelId(route.getChannelId());
-            task.setChannelModelRelationId(route.getRelationId());
-            task.setRemoteModelName(route.getRemoteModelName());
-            task.setRemark("任务已提交，等待渠道执行：" + StringUtils.defaultIfBlank(route.getChannelName(), "未命名渠道"));
+            return existingTask;
         }
-        else
+        if (!redisCache.setCacheObjectIfAbsent(idempotentKey, IMAGE_SUBMIT_IDEMPOTENT_PENDING, IMAGE_SUBMIT_IDEMPOTENT_TTL_SECONDS, TimeUnit.SECONDS))
         {
-            task.setRemoteModelName(StringUtils.defaultIfBlank(version.getApiModelName(), version.getVersionCode()));
-            task.setRemark("任务已创建，待接入实际模型执行器");
+            throw new ServiceException("任务提交中，请勿重复提交");
         }
-        task.setSubmitTime(DateUtils.getNowDate());
-        aiTaskMapper.insertAiTask(task);
-        aiWalletService.consumePower(userId, version.getPowerCost(), "TASK_SUBMIT", task.getTaskId(), "提交图片生成任务扣减算力");
-        if (route != null)
+        AiModel model = aiModelService.selectAiModelById(bo.getModelId());
+        try
         {
-            dispatchRealImageTask(task.getTaskId(), model.getModelId(), version.getVersionId(), route.getRelationId());
+            if (model == null || !"0".equals(model.getStatus()))
+            {
+                throw new ServiceException("模型不存在或已停用");
+            }
+            AiModelVersion version = aiModelVersionService.selectAiModelVersionById(bo.getVersionId());
+            if (version == null || !"0".equals(version.getStatus()))
+            {
+                throw new ServiceException("模型版本不存在或已停用");
+            }
+            if (!bo.getModelId().equals(version.getModelId()))
+            {
+                throw new ServiceException("模型和版本不匹配");
+            }
+            AiChannelModelRelation route = resolveChannelModelRelation(version.getVersionId());
+
+            AiTask task = new AiTask();
+            task.setTaskNo("T" + DateUtils.dateTimeNow() + IdUtils.fastSimpleUUID().substring(0, 8).toUpperCase());
+            task.setUserId(userId);
+            task.setModelId(model.getModelId());
+            task.setModelVersionId(version.getVersionId());
+            task.setTaskType("IMAGE");
+            task.setCreateMode(bo.getCreateMode());
+            task.setPromptText(bo.getPromptText());
+            task.setNegativePrompt(bo.getNegativePrompt());
+            task.setStyleCode(bo.getStyleCode());
+            task.setRatioCode(bo.getRatioCode());
+            task.setSourceUrl(bo.getSourceUrl());
+            task.setStatus(route == null ? "PENDING" : "WAITING");
+            task.setPowerCost(version.getPowerCost());
+            if (route != null)
+            {
+                task.setChannelId(route.getChannelId());
+                task.setChannelModelRelationId(route.getRelationId());
+                task.setRemoteModelName(route.getRemoteModelName());
+                task.setRemark("任务已提交，等待渠道执行：" + StringUtils.defaultIfBlank(route.getChannelName(), "未命名渠道"));
+            }
+            else
+            {
+                task.setRemoteModelName(StringUtils.defaultIfBlank(version.getApiModelName(), version.getVersionCode()));
+                task.setRemark("任务已创建，待接入实际模型执行器");
+            }
+            task.setSubmitTime(DateUtils.getNowDate());
+            aiTaskMapper.insertAiTask(task);
+            aiWalletService.consumePower(userId, version.getPowerCost(), "TASK_SUBMIT", task.getTaskId(), "提交图片生成任务扣减算力");
+            redisCache.setCacheObject(idempotentKey, String.valueOf(task.getTaskId()), IMAGE_SUBMIT_IDEMPOTENT_TTL_SECONDS, TimeUnit.SECONDS);
+            if (route != null)
+            {
+                dispatchRealImageTask(task.getTaskId(), model.getModelId(), version.getVersionId(), route.getRelationId());
+            }
+            return aiTaskMapper.selectAiTaskById(task.getTaskId());
         }
-        return aiTaskMapper.selectAiTaskById(task.getTaskId());
+        catch (Exception ex)
+        {
+            redisCache.deleteObject(idempotentKey);
+            throw ex;
+        }
+    }
+
+    private String buildImageSubmitIdempotentKey(Long userId, AppImageTaskSubmitBo bo)
+    {
+        String requestId = StringUtils.trim(bo.getClientRequestId());
+        if (StringUtils.isBlank(requestId))
+        {
+            requestId = buildImageSubmitFingerprint(bo);
+        }
+        return IMAGE_SUBMIT_IDEMPOTENT_KEY_PREFIX + userId + ":" + requestId;
+    }
+
+    private String buildImageSubmitFingerprint(AppImageTaskSubmitBo bo)
+    {
+        JSONObject payload = new JSONObject();
+        payload.put("modelId", bo.getModelId());
+        payload.put("versionId", bo.getVersionId());
+        payload.put("createMode", StringUtils.trim(bo.getCreateMode()));
+        payload.put("promptText", StringUtils.trim(bo.getPromptText()));
+        payload.put("negativePrompt", StringUtils.trim(bo.getNegativePrompt()));
+        payload.put("styleCode", StringUtils.trim(bo.getStyleCode()));
+        payload.put("ratioCode", StringUtils.trim(bo.getRatioCode()));
+        payload.put("sourceUrl", StringUtils.trim(bo.getSourceUrl()));
+        return DigestUtils.md5DigestAsHex(JSON.toJSONString(payload).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private AiTask getExistingIdempotentTask(String idempotentKey)
+    {
+        String cachedTaskId = redisCache.getCacheObject(idempotentKey);
+        if (StringUtils.isBlank(cachedTaskId))
+        {
+            return null;
+        }
+        if (IMAGE_SUBMIT_IDEMPOTENT_PENDING.equals(cachedTaskId))
+        {
+            throw new ServiceException("任务提交中，请勿重复提交");
+        }
+        AiTask existingTask = aiTaskMapper.selectAiTaskById(Long.valueOf(cachedTaskId));
+        if (existingTask == null)
+        {
+            redisCache.deleteObject(idempotentKey);
+        }
+        return existingTask;
     }
 
     private void dispatchRealImageTask(Long taskId, Long modelId, Long versionId, Long relationId)
     {
-        threadPoolTaskExecutor.execute(() -> executeRealImageTask(taskId, modelId, versionId, relationId));
+        Runnable taskRunner = () -> threadPoolTaskExecutor.execute(() -> executeRealImageTask(taskId, modelId, versionId, relationId));
+        if (TransactionSynchronizationManager.isSynchronizationActive())
+        {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization()
+            {
+                @Override
+                public void afterCommit()
+                {
+                    taskRunner.run();
+                }
+            });
+            return;
+        }
+        taskRunner.run();
     }
 
     private AiChannelModelRelation resolveChannelModelRelation(Long versionId)
@@ -527,6 +617,10 @@ public class AiTaskServiceImpl implements IAiTaskService
     private AiTask hydrateMockTask(AiTask task)
     {
         if (task == null || task.getSubmitTime() == null)
+        {
+            return task;
+        }
+        if (task.getChannelModelRelationId() != null || task.getChannelId() != null)
         {
             return task;
         }

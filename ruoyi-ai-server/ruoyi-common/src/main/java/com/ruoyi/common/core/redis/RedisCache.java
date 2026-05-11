@@ -50,6 +50,21 @@ public class RedisCache
     }
 
     /**
+     * 仅当 key 不存在时缓存对象
+     *
+     * @param key 缓存的键值
+     * @param value 缓存的值
+     * @param timeout 时间
+     * @param timeUnit 时间颗粒度
+     * @return true=设置成功；false=key已存在或设置失败
+     */
+    public <T> boolean setCacheObjectIfAbsent(final String key, final T value, final Integer timeout, final TimeUnit timeUnit)
+    {
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, value, timeout, timeUnit);
+        return Boolean.TRUE.equals(success);
+    }
+
+    /**
      * 设置有效时间
      *
      * @param key Redis键

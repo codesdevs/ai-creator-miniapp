@@ -12,6 +12,17 @@
       </view>
       <text class="hero-no">任务编号：{{ task.taskNo }}</text>
       <text class="hero-remark">{{ task.remark || '任务已创建，等待执行结果。' }}</text>
+      <view class="progress-card">
+        <view
+          v-for="item in progressSteps"
+          :key="item.value"
+          :class="['progress-item', item.active ? 'active' : '', item.done ? 'done' : '']"
+        >
+          <view class="progress-dot">{{ item.done ? '✓' : item.index }}</view>
+          <text class="progress-text">{{ item.label }}</text>
+        </view>
+      </view>
+      <text v-if="polling" class="hero-tip">状态自动刷新中，生成完成后会展示结果图片。</text>
       <view v-if="task.failReason" class="fail-box">
         <text class="fail-label">失败原因</text>
         <text class="fail-text">{{ task.failReason }}</text>
@@ -99,7 +110,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getTaskDetail } from '@/api/task'
 import { requireLogin } from '@/utils/auth'
 
@@ -129,13 +140,29 @@ const emptyDesc = computed(() => {
   if (!task.value) {
     return '请稍后再试。'
   }
-  if (['PENDING', 'WAITING', 'RUNNING'].includes(task.value.status)) {
-    return '页面会自动刷新，你也可以手动刷新查看最新状态。'
+  if (task.value.status === 'WAITING') {
+    return '任务已经入队，后台正在调度渠道执行。'
+  }
+  if (task.value.status === 'RUNNING') {
+    return '模型已经开始处理，请等待结果回传。'
+  }
+  if (task.value.status === 'PENDING') {
+    return '任务已创建，等待进入执行队列。'
   }
   if (task.value.status === 'FAIL') {
     return task.value.failReason || '请调整提示词或模型版本后重新提交。'
   }
   return '结果文件将在任务完成后展示。'
+})
+
+const progressSteps = computed(() => {
+  const status = task.value?.status
+  const current = status === 'SUCCESS' ? 3 : status === 'FAIL' ? 3 : status === 'RUNNING' ? 2 : status === 'WAITING' ? 1 : 0
+  return [
+    { index: 1, value: 'WAITING', label: '已提交', done: current >= 1, active: current === 1 },
+    { index: 2, value: 'RUNNING', label: '生成中', done: current >= 2, active: current === 2 },
+    { index: 3, value: status === 'FAIL' ? 'FAIL' : 'SUCCESS', label: status === 'FAIL' ? '执行失败' : '生成完成', done: current >= 3, active: current === 3 }
+  ]
 })
 
 function statusText(status) {
@@ -184,7 +211,7 @@ function schedulePolling() {
   polling.value = true
   pollTimer = setTimeout(() => {
     loadTask(false)
-  }, 5000)
+  }, 4000)
 }
 
 async function loadTask(showLoading = true) {
@@ -275,6 +302,12 @@ onLoad((options) => {
   loadTask(true)
 })
 
+onShow(() => {
+  if (taskId.value) {
+    loadTask(false)
+  }
+})
+
 onUnload(() => {
   clearPolling()
 })
@@ -344,6 +377,54 @@ onUnload(() => {
   color: #d4daf4;
   font-size: 25rpx;
   line-height: 1.7;
+}
+
+.hero-tip {
+  display: block;
+  margin-top: 16rpx;
+  color: #93a7e8;
+  font-size: 22rpx;
+}
+
+.progress-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.progress-item {
+  flex: 1;
+  padding: 18rpx 12rpx;
+  border-radius: 18rpx;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.progress-item.active {
+  background: rgba(93, 129, 255, 0.18);
+}
+
+.progress-item.done {
+  background: rgba(76, 217, 126, 0.14);
+}
+
+.progress-dot {
+  display: inline-flex;
+  width: 40rpx;
+  height: 40rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.progress-text {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
 }
 
 .status-pill {
@@ -524,42 +605,42 @@ onUnload(() => {
 
 .empty-desc {
   display: block;
-  margin-top: 12rpx;
-  color: #9eabd8;
-  font-size: 25rpx;
+  margin-top: 14rpx;
+  color: #bcc7ef;
+  font-size: 24rpx;
   line-height: 1.7;
 }
 
-.action-row {
-  gap: 18rpx;
-}
-
-.primary-btn,
-.secondary-btn {
-  flex: 1;
-  border-radius: 999rpx;
-  font-size: 28rpx;
-}
-
-.primary-btn {
-  border: none;
-  background: linear-gradient(135deg, #4d38d6 0%, #3578ff 100%);
-  color: #fff;
-}
-
-.secondary-btn {
-  background: #1a2035;
-  color: #d7e0ff;
-  border: 1rpx solid rgba(151, 170, 255, 0.18);
-}
-
 .state {
-  padding: 30rpx 0;
+  padding: 32rpx 0;
   color: #afbadf;
   font-size: 26rpx;
 }
 
 .error {
   color: #ff9797;
+}
+
+.action-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.primary-btn,
+.secondary-btn {
+  flex: 1;
+  border: none;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #4d38d6 0%, #2f7cff 100%);
+  color: #fff;
+}
+
+.secondary-btn {
+  background: #202741;
+  color: #d3dcff;
 }
 </style>

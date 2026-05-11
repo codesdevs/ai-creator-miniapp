@@ -13,6 +13,8 @@ public class AppImageTaskSubmitBo
 {
     private Long userId;
 
+    private String clientRequestId;
+
     @NotNull(message = "模型ID不能为空")
     private Long modelId;
 
@@ -42,6 +44,16 @@ public class AppImageTaskSubmitBo
     public void setUserId(Long userId)
     {
         this.userId = userId;
+    }
+
+    public String getClientRequestId()
+    {
+        return clientRequestId;
+    }
+
+    public void setClientRequestId(String clientRequestId)
+    {
+        this.clientRequestId = clientRequestId;
     }
 
     public Long getModelId()

@@ -9,6 +9,11 @@
     <view v-if="loading" class="state">加载中...</view>
     <view v-else-if="loadError" class="state error">{{ loadError }}</view>
     <template v-else>
+      <view class="tip-card">
+        <text class="tip-title">提交后异步生成</text>
+        <text class="tip-desc">当前接口会先返回任务 ID，再由后台异步调用模型。提交完成后会自动跳转到任务详情页，通过任务状态轮询查看结果。</text>
+      </view>
+
       <view class="panel">
         <view v-if="sourceTaskId" class="reuse-banner">
           <text class="reuse-title">已载入历史任务参数</text>
@@ -35,7 +40,7 @@
           </view>
           <view class="summary-item">
             <text class="summary-label">支持模式</text>
-            <text class="summary-value">{{ modeOptions.length ? modeOptions.join(' / ') : '-' }}</text>
+            <text class="summary-value">{{ modeOptions.length ? modeOptions.map(formatMode).join(' / ') : '-' }}</text>
           </view>
         </view>
 
@@ -51,6 +56,7 @@
               {{ formatMode(item) }}
             </view>
           </view>
+          <text v-if="form.createMode === 'IMAGE_TO_IMAGE'" class="field-tip">图生图需要提供原图地址。当前智谱链路主要先验证异步任务流。</text>
         </view>
 
         <view class="field">
@@ -70,6 +76,15 @@
             class="textarea small"
             maxlength="800"
             placeholder="可选，输入不希望出现的元素"
+          />
+        </view>
+
+        <view class="field">
+          <text class="field-label">原图地址</text>
+          <input
+            v-model="form.sourceUrl"
+            class="input"
+            placeholder="图生图时填写可访问的图片 URL"
           />
         </view>
 
@@ -110,7 +125,7 @@
           <text class="submit-power">{{ currentVersion?.powerCost || 0 }} 算力</text>
         </view>
         <button class="submit-btn" :disabled="submitting || !currentVersion" @tap="handleSubmit">
-          {{ submitting ? '提交中...' : '立即创作' }}
+          {{ submitting ? '任务创建中...' : '立即创作' }}
         </button>
       </view>
     </template>
@@ -133,13 +148,18 @@ const submitting = ref(false)
 const loading = ref(false)
 const loadError = ref('')
 const draftLoaded = ref(false)
+const submitToken = ref('')
+const lastSubmitAt = ref(0)
+
+const SUBMIT_DEBOUNCE_MS = 1200
 
 const form = ref({
   createMode: '',
   promptText: '',
   negativePrompt: '',
   styleCode: '',
-  ratioCode: ''
+  ratioCode: '',
+  sourceUrl: ''
 })
 
 const currentVersion = computed(() => versions.value[currentVersionIndex.value] || null)
@@ -180,6 +200,9 @@ function applyVersionDefaults() {
   form.value.createMode = modeOptions.value[0] || 'TEXT_TO_IMAGE'
   form.value.styleCode = styleOptions.value[0] || ''
   form.value.ratioCode = ratioOptions.value[0] || ''
+  if (form.value.createMode !== 'IMAGE_TO_IMAGE') {
+    form.value.sourceUrl = ''
+  }
 }
 
 function applyTaskDraft(task) {
@@ -194,6 +217,7 @@ function applyTaskDraft(task) {
   form.value.negativePrompt = task.negativePrompt || ''
   form.value.styleCode = task.styleCode || form.value.styleCode
   form.value.ratioCode = task.ratioCode || form.value.ratioCode
+  form.value.sourceUrl = task.sourceUrl || ''
 }
 
 async function loadTaskDraft(taskId) {
@@ -229,36 +253,72 @@ function selectVersion(index) {
   applyVersionDefaults()
 }
 
-async function handleSubmit() {
-  if (!requireLogin()) {
-    return
-  }
+function validateBeforeSubmit() {
   if (!form.value.promptText.trim()) {
     uni.showToast({ title: '请输入提示词', icon: 'none' })
-    return
+    return false
   }
   if (!currentVersion.value) {
     uni.showToast({ title: '请选择模型版本', icon: 'none' })
+    return false
+  }
+  if (form.value.createMode === 'IMAGE_TO_IMAGE' && !form.value.sourceUrl.trim()) {
+    uni.showToast({ title: '图生图请填写原图地址', icon: 'none' })
+    return false
+  }
+  return true
+}
+
+function buildClientRequestId() {
+  return `img-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+async function handleSubmit() {
+  const now = Date.now()
+  if (now - lastSubmitAt.value < SUBMIT_DEBOUNCE_MS) {
+    uni.showToast({ title: '操作过快，请稍后再试', icon: 'none' })
     return
   }
+  if (submitToken.value) {
+    uni.showToast({ title: '任务提交中，请勿重复点击', icon: 'none' })
+    return
+  }
+  if (submitting.value) {
+    uni.showToast({ title: '任务提交中，请勿重复点击', icon: 'none' })
+    return
+  }
+  if (!requireLogin() || !validateBeforeSubmit()) {
+    return
+  }
+  lastSubmitAt.value = now
+  submitToken.value = buildClientRequestId()
   submitting.value = true
   try {
     const res = await submitImageTask({
+      clientRequestId: submitToken.value,
       modelId: modelId.value,
       versionId: currentVersion.value.versionId,
       createMode: form.value.createMode,
       promptText: form.value.promptText,
       negativePrompt: form.value.negativePrompt,
       styleCode: form.value.styleCode,
-      ratioCode: form.value.ratioCode
+      ratioCode: form.value.ratioCode,
+      sourceUrl: form.value.sourceUrl
     })
-    uni.navigateTo({
-      url: `/pages/task/detail?taskId=${res.taskId}`
+    uni.showToast({
+      title: res.status === 'WAITING' || res.status === 'RUNNING' ? '任务已提交，开始生成' : '任务创建成功',
+      icon: 'none'
     })
+    setTimeout(() => {
+      uni.navigateTo({
+        url: `/pages/task/detail?taskId=${res.taskId}`
+      })
+    }, 350)
   } catch (error) {
     uni.showToast({ title: error.message || '提交失败', icon: 'none' })
   } finally {
     submitting.value = false
+    submitToken.value = ''
   }
 }
 
@@ -283,7 +343,9 @@ onLoad((options) => {
 .panel,
 .submit-bar,
 .chip-card,
-.pill {
+.pill,
+.tip-card,
+.input {
   border-radius: 24rpx;
 }
 
@@ -310,6 +372,27 @@ onLoad((options) => {
   margin-top: 18rpx;
   color: #d3daf3;
   font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.tip-card {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  background: linear-gradient(135deg, rgba(59, 91, 214, 0.22), rgba(36, 52, 120, 0.18));
+  border: 1rpx solid rgba(122, 154, 255, 0.24);
+}
+
+.tip-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.tip-desc {
+  display: block;
+  margin-top: 10rpx;
+  color: #c9d4ff;
+  font-size: 23rpx;
   line-height: 1.7;
 }
 
@@ -407,6 +490,14 @@ onLoad((options) => {
   margin-top: 28rpx;
 }
 
+.field-tip {
+  display: block;
+  margin-top: 12rpx;
+  color: #8fa3e8;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
 .pill-group {
   display: flex;
   flex-wrap: wrap;
@@ -430,20 +521,27 @@ onLoad((options) => {
   opacity: 0.7;
 }
 
-.textarea {
+.textarea,
+.input {
   width: 100%;
-  min-height: 220rpx;
   box-sizing: border-box;
   margin-top: 16rpx;
   padding: 24rpx;
-  border-radius: 20rpx;
   background: #0f1427;
   color: #fff;
   font-size: 28rpx;
 }
 
+.textarea {
+  min-height: 220rpx;
+}
+
 .textarea.small {
   min-height: 140rpx;
+}
+
+.input {
+  height: 96rpx;
 }
 
 .submit-bar {

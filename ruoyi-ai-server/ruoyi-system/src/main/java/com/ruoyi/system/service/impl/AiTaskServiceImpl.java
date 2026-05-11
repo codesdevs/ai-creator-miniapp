@@ -61,6 +61,26 @@ public class AiTaskServiceImpl implements IAiTaskService
     }
 
     @Override
+    public AiTask selectUserTaskDetail(Long userId, Long taskId)
+    {
+        AiTask task = aiTaskMapper.selectAiTaskById(taskId);
+        if (task == null || !userId.equals(task.getUserId()))
+        {
+            throw new ServiceException("任务不存在");
+        }
+        return task;
+    }
+
+    @Override
+    public List<AiTask> selectUserTaskList(Long userId)
+    {
+        AiTask query = new AiTask();
+        query.setUserId(userId);
+        query.setTaskType("IMAGE");
+        return aiTaskMapper.selectAiTaskList(query);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public AiTask submitImageTask(AppImageTaskSubmitBo bo)
     {

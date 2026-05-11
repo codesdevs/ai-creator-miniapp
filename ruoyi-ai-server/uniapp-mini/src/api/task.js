@@ -13,3 +13,9 @@ export function getTaskDetail(taskId) {
     url: `/app/task/detail/${taskId}`
   })
 }
+
+export function getMyTaskList() {
+  return request({
+    url: '/app/task/myList'
+  })
+}

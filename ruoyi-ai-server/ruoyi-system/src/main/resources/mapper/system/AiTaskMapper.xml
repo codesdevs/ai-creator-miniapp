@@ -52,6 +52,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectAiTaskVo"/>
         <where>
             <if test="taskNo != null and taskNo != ''">and t.task_no like concat('%', #{taskNo}, '%')</if>
+            <if test="userId != null">and t.user_id = #{userId}</if>
             <if test="modelId != null">and t.model_id = #{modelId}</if>
             <if test="modelVersionId != null">and t.model_version_id = #{modelVersionId}</if>
             <if test="taskType != null and taskType != ''">and t.task_type = #{taskType}</if>

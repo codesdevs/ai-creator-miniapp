@@ -19,4 +19,8 @@ public interface IAiTaskService
     public List<AiTaskResult> selectAiTaskResultListByTaskId(Long taskId);
 
     public AiTask submitImageTask(AppImageTaskSubmitBo bo);
+
+    public AiTask selectUserTaskDetail(Long userId, Long taskId);
+
+    public List<AiTask> selectUserTaskList(Long userId);
 }

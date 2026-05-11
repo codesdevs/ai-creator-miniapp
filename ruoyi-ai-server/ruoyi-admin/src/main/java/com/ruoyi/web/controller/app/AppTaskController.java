@@ -47,9 +47,20 @@ public class AppTaskController
     @GetMapping("/detail/{taskId}")
     public AjaxResult detail(@PathVariable Long taskId)
     {
+        Long userId = AppSecurityUtils.getUserId();
+        AiTask task = aiTaskService.selectUserTaskDetail(userId, taskId);
         AjaxResult result = AjaxResult.success();
-        result.put("task", aiTaskService.selectAiTaskById(taskId));
+        result.put("task", task);
         result.put("resultList", aiTaskService.selectAiTaskResultListByTaskId(taskId));
         return result;
+    }
+
+    /**
+     * 查询当前用户任务列表
+     */
+    @GetMapping("/myList")
+    public AjaxResult myList()
+    {
+        return AjaxResult.success(aiTaskService.selectUserTaskList(AppSecurityUtils.getUserId()));
     }
 }

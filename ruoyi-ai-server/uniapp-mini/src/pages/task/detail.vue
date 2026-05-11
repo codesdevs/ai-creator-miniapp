@@ -1,96 +1,484 @@
 <template>
-  <view class="page">
-    <view class="card" v-if="task">
-      <text class="title">{{ task.taskNo }}</text>
-      <text class="item">状态：{{ task.status }}</text>
-      <text class="item">模型：{{ task.modelName || '-' }}</text>
-      <text class="item">版本：{{ task.versionName || '-' }}</text>
-      <text class="item">算力：{{ task.powerCost || 0 }}</text>
-      <text class="item">提示词：{{ task.promptText || '-' }}</text>
-      <text class="item">备注：{{ task.remark || '-' }}</text>
+  <scroll-view class="page" scroll-y>
+    <view v-if="task" class="hero-card">
+      <view class="hero-top">
+        <view>
+          <text class="hero-title">{{ task.modelName || '任务详情' }}</text>
+          <text class="hero-sub">{{ task.versionName || '-' }}</text>
+        </view>
+        <view :class="['status-pill', statusClass(task.status)]">
+          {{ statusText(task.status) }}
+        </view>
+      </view>
+      <text class="hero-no">任务编号：{{ task.taskNo }}</text>
+      <text class="hero-remark">{{ task.remark || '任务已创建，等待执行结果。' }}</text>
+      <view v-if="task.failReason" class="fail-box">
+        <text class="fail-label">失败原因</text>
+        <text class="fail-text">{{ task.failReason }}</text>
+      </view>
+    </view>
+
+    <view class="info-card" v-if="task">
+      <view class="info-row">
+        <text class="info-label">创作模式</text>
+        <text class="info-value">{{ formatMode(task.createMode) }}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">画面比例</text>
+        <text class="info-value">{{ task.ratioCode || '-' }}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">风格</text>
+        <text class="info-value">{{ task.styleCode || '-' }}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">算力消耗</text>
+        <text class="info-value">{{ task.powerCost || 0 }}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">提交时间</text>
+        <text class="info-value">{{ task.submitTime || '-' }}</text>
+      </view>
+      <view class="info-row" v-if="task.finishTime">
+        <text class="info-label">完成时间</text>
+        <text class="info-value">{{ task.finishTime }}</text>
+      </view>
+    </view>
+
+    <view class="prompt-card" v-if="task">
+      <text class="card-title">提示词</text>
+      <text class="prompt-text">{{ task.promptText || '-' }}</text>
+      <text class="card-title muted">反向提示词</text>
+      <text class="prompt-text">{{ task.negativePrompt || '-' }}</text>
     </view>
 
     <view class="section">
-      <text class="section-title">结果列表</text>
-      <view v-if="!results.length" class="empty">当前没有结果文件</view>
-      <view v-for="item in results" :key="item.resultId" class="result-card">
-        <text>类型：{{ item.resultType }}</text>
-        <text>文件：{{ item.fileUrl || '-' }}</text>
+      <view class="section-head">
+        <text class="section-title">结果列表</text>
+        <text v-if="polling" class="polling-tip">自动刷新中</text>
+      </view>
+
+      <view v-if="loading" class="state">加载中...</view>
+      <view v-else-if="errorMessage" class="state error">{{ errorMessage }}</view>
+      <view v-else-if="!results.length" class="empty-card">
+        <text class="empty-title">{{ emptyTitle }}</text>
+        <text class="empty-desc">{{ emptyDesc }}</text>
+      </view>
+      <view v-else class="result-list">
+        <view v-for="item in results" :key="item.resultId" class="result-card">
+          <image
+            v-if="item.coverUrl || item.fileUrl"
+            class="result-image"
+            :src="item.coverUrl || item.fileUrl"
+            mode="aspectFill"
+          />
+          <view class="result-meta">
+            <text class="result-type">{{ item.resultType || 'IMAGE' }}</text>
+            <text class="result-size">
+              {{ item.width && item.height ? `${item.width} x ${item.height}` : '尺寸未知' }}
+            </text>
+          </view>
+          <text class="result-url">{{ item.fileUrl || '-' }}</text>
+        </view>
       </view>
     </view>
-  </view>
+
+    <view class="action-row" v-if="task?.modelId">
+      <button class="secondary-btn" @tap="reload">刷新状态</button>
+      <button class="primary-btn" @tap="createAgain">再次创作</button>
+    </view>
+  </scroll-view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { computed, ref } from 'vue'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { getTaskDetail } from '@/api/task'
 import { requireLogin } from '@/utils/auth'
 
+const taskId = ref()
 const task = ref(null)
 const results = ref([])
+const loading = ref(false)
+const errorMessage = ref('')
+const polling = ref(false)
+let pollTimer = null
 
-async function loadTask(taskId) {
+const emptyTitle = computed(() => {
+  if (!task.value) {
+    return '暂无结果'
+  }
+  if (['PENDING', 'WAITING', 'RUNNING'].includes(task.value.status)) {
+    return '结果生成中'
+  }
+  if (task.value.status === 'FAIL') {
+    return '任务执行失败'
+  }
+  return '当前没有结果文件'
+})
+
+const emptyDesc = computed(() => {
+  if (!task.value) {
+    return '请稍后再试。'
+  }
+  if (['PENDING', 'WAITING', 'RUNNING'].includes(task.value.status)) {
+    return '页面会自动刷新，你也可以手动刷新查看最新状态。'
+  }
+  if (task.value.status === 'FAIL') {
+    return task.value.failReason || '请调整提示词或模型版本后重新提交。'
+  }
+  return '结果文件将在任务完成后展示。'
+})
+
+function statusText(status) {
+  const map = {
+    PENDING: '待执行',
+    WAITING: '排队中',
+    RUNNING: '生成中',
+    SUCCESS: '已完成',
+    FAIL: '失败'
+  }
+  return map[status] || status || '未知'
+}
+
+function statusClass(status) {
+  const map = {
+    PENDING: 'pending',
+    WAITING: 'pending',
+    RUNNING: 'running',
+    SUCCESS: 'success',
+    FAIL: 'fail'
+  }
+  return map[status] || 'pending'
+}
+
+function formatMode(mode) {
+  const map = {
+    TEXT_TO_IMAGE: '文生图',
+    IMAGE_TO_IMAGE: '图生图'
+  }
+  return map[mode] || mode || '-'
+}
+
+function clearPolling() {
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = null
+  }
+  polling.value = false
+}
+
+function schedulePolling() {
+  clearPolling()
+  if (!task.value || !['PENDING', 'WAITING', 'RUNNING'].includes(task.value.status)) {
+    return
+  }
+  polling.value = true
+  pollTimer = setTimeout(() => {
+    loadTask(false)
+  }, 5000)
+}
+
+async function loadTask(showLoading = true) {
   if (!requireLogin()) {
     return
   }
-  const res = await getTaskDetail(taskId)
-  task.value = res.task || null
-  results.value = res.resultList || []
+  if (showLoading) {
+    loading.value = true
+  }
+  errorMessage.value = ''
+  try {
+    const res = await getTaskDetail(taskId.value)
+    task.value = res.task || null
+    results.value = res.resultList || []
+    schedulePolling()
+  } catch (error) {
+    clearPolling()
+    errorMessage.value = error.message || '加载失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+function reload() {
+  loadTask(true)
+}
+
+function createAgain() {
+  if (!task.value?.modelId) {
+    return
+  }
+  uni.navigateTo({
+    url: `/pages/create/image?modelId=${task.value.modelId}`
+  })
 }
 
 onLoad((options) => {
-  loadTask(options.taskId).catch((error) => {
-    uni.showToast({ title: error.message || '加载失败', icon: 'none' })
-  })
+  taskId.value = Number(options.taskId)
+  loadTask(true)
+})
+
+onUnload(() => {
+  clearPolling()
 })
 </script>
 
 <style lang="scss">
 .page {
   min-height: 100vh;
-  padding: 24rpx;
-  background: #0f1020;
+  padding: 24rpx 24rpx 40rpx;
+  background: #0d1121;
   color: #fff;
 }
 
-.card,
-.result-card {
-  padding: 24rpx;
-  border-radius: 20rpx;
-  background: #1a1d35;
+.hero-card,
+.info-card,
+.prompt-card,
+.result-card,
+.empty-card {
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, #1b223d 0%, #13192d 100%);
 }
 
-.title {
+.hero-card,
+.info-card,
+.prompt-card,
+.empty-card {
+  padding: 28rpx;
+}
+
+.hero-top,
+.info-row,
+.result-meta,
+.action-row,
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.hero-title {
   display: block;
-  margin-bottom: 16rpx;
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 36rpx;
+  font-weight: 700;
 }
 
-.item {
+.hero-sub,
+.hero-no,
+.hero-remark {
+  display: block;
+}
+
+.hero-sub {
+  margin-top: 8rpx;
+  color: #9da9d8;
+  font-size: 24rpx;
+}
+
+.hero-no {
+  margin-top: 18rpx;
+  color: #8fa0d7;
+  font-size: 24rpx;
+}
+
+.hero-remark {
+  margin-top: 14rpx;
+  color: #d4daf4;
+  font-size: 25rpx;
+  line-height: 1.7;
+}
+
+.status-pill {
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+}
+
+.status-pill.pending {
+  background: rgba(255, 199, 84, 0.16);
+  color: #ffca69;
+}
+
+.status-pill.running {
+  background: rgba(91, 139, 255, 0.16);
+  color: #8fb0ff;
+}
+
+.status-pill.success {
+  background: rgba(76, 217, 126, 0.16);
+  color: #77e39f;
+}
+
+.status-pill.fail {
+  background: rgba(255, 120, 120, 0.16);
+  color: #ff9999;
+}
+
+.fail-box {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border-radius: 18rpx;
+  background: rgba(255, 120, 120, 0.08);
+}
+
+.fail-label {
+  display: block;
+  color: #ff9e9e;
+  font-size: 22rpx;
+}
+
+.fail-text {
   display: block;
   margin-top: 8rpx;
-  color: #d1d6ef;
-  font-size: 26rpx;
+  color: #ffd0d0;
+  font-size: 24rpx;
+  line-height: 1.6;
 }
 
-.section {
-  margin-top: 28rpx;
+.info-card,
+.prompt-card,
+.section,
+.action-row {
+  margin-top: 20rpx;
+}
+
+.info-label {
+  color: #98a5d5;
+  font-size: 24rpx;
+}
+
+.info-value {
+  max-width: 60%;
+  text-align: right;
+  color: #eef1ff;
+  font-size: 24rpx;
+}
+
+.info-row + .info-row {
+  margin-top: 18rpx;
+}
+
+.card-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.card-title.muted {
+  margin-top: 24rpx;
+  color: #a1add7;
+  font-size: 24rpx;
+}
+
+.prompt-text {
+  display: block;
+  margin-top: 14rpx;
+  color: #d4daf4;
+  font-size: 26rpx;
+  line-height: 1.7;
 }
 
 .section-title {
-  display: block;
-  margin-bottom: 16rpx;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.polling-tip {
+  color: #8fa1dc;
+  font-size: 22rpx;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  margin-top: 18rpx;
 }
 
 .result-card {
-  margin-top: 16rpx;
+  overflow: hidden;
 }
 
-.empty {
-  color: #9aa0c8;
+.result-image {
+  width: 100%;
+  height: 420rpx;
+  background: #0e1325;
+}
+
+.result-meta,
+.result-url {
+  padding: 0 24rpx;
+}
+
+.result-meta {
+  margin-top: 20rpx;
+}
+
+.result-type {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.result-size {
+  color: #98a5d5;
+  font-size: 22rpx;
+}
+
+.result-url {
+  display: block;
+  margin-top: 10rpx;
+  padding-bottom: 24rpx;
+  color: #cfd6f0;
+  font-size: 22rpx;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.empty-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.empty-desc {
+  display: block;
+  margin-top: 12rpx;
+  color: #9eabd8;
+  font-size: 25rpx;
+  line-height: 1.7;
+}
+
+.action-row {
+  gap: 18rpx;
+}
+
+.primary-btn,
+.secondary-btn {
+  flex: 1;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+}
+
+.primary-btn {
+  border: none;
+  background: linear-gradient(135deg, #4d38d6 0%, #3578ff 100%);
+  color: #fff;
+}
+
+.secondary-btn {
+  background: #1a2035;
+  color: #d7e0ff;
+  border: 1rpx solid rgba(151, 170, 255, 0.18);
+}
+
+.state {
+  padding: 30rpx 0;
+  color: #afbadf;
+  font-size: 26rpx;
+}
+
+.error {
+  color: #ff9797;
 }
 </style>

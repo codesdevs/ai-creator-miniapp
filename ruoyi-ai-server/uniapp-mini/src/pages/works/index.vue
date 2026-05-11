@@ -2,25 +2,38 @@
   <scroll-view class="page" scroll-y>
     <view class="topbar">
       <text class="title">我的作品</text>
-      <text class="sub">查看已提交任务、生成状态和结果入口</text>
+      <text class="sub">查看已提交任务、当前状态、失败原因和再次创作入口。</text>
     </view>
+
+    <scroll-view class="filter-row" scroll-x>
+      <view
+        v-for="item in statusFilters"
+        :key="item.value"
+        :class="['filter-pill', activeFilter === item.value ? 'active' : '']"
+        @tap="activeFilter = item.value"
+      >
+        {{ item.label }}
+      </view>
+    </scroll-view>
 
     <view v-if="loading" class="state">加载中...</view>
     <view v-else-if="errorMessage" class="state error">{{ errorMessage }}</view>
-    <view v-else-if="!tasks.length" class="empty-card">
-      <text class="empty-title">还没有创作记录</text>
-      <text class="empty-desc">先去模型中心选一个模型，提交你的第一条任务。</text>
-      <button class="empty-btn" @tap="goAppCenter">去创作</button>
+    <view v-else-if="!filteredTasks.length" class="empty-card">
+      <text class="empty-title">{{ isLoggedIn() ? '当前筛选下暂无任务' : '还没有创作记录' }}</text>
+      <text class="empty-desc">
+        {{ isLoggedIn() ? '换一个筛选条件试试，或者去模型中心再提交一条新任务。' : '先登录，再去模型中心选一个模型开始创作。' }}
+      </text>
+      <button class="empty-btn" @tap="handleEmptyAction">{{ isLoggedIn() ? '去创作' : '去登录' }}</button>
     </view>
     <view v-else class="task-list">
       <view
-        v-for="item in tasks"
+        v-for="item in filteredTasks"
         :key="item.taskId"
         class="task-card"
       >
         <view class="task-main" @tap="goDetail(item.taskId)">
           <view class="task-head">
-            <view>
+            <view class="task-head-main">
               <text class="task-model">{{ item.modelName || '未命名模型' }}</text>
               <text class="task-version">{{ item.versionName || '-' }}</text>
             </view>
@@ -28,14 +41,14 @@
               {{ statusText(item.status) }}
             </view>
           </view>
-          <view>
-            <text class="task-prompt">{{ item.promptText || '未填写提示词' }}</text>
-            <view class="task-meta">
-              <text>{{ formatMode(item.createMode) }}</text>
-              <text>{{ item.powerCost || 0 }} 算力</text>
-              <text>{{ item.submitTime || '-' }}</text>
-            </view>
+          <text class="task-prompt">{{ item.promptText || '未填写提示词' }}</text>
+          <view class="task-meta">
+            <text>{{ formatMode(item.createMode) }}</text>
+            <text>{{ item.ratioCode || '默认比例' }}</text>
+            <text>{{ item.powerCost || 0 }} 算力</text>
+            <text>{{ item.submitTime || '-' }}</text>
           </view>
+          <text v-if="item.failReason" class="task-fail">失败原因：{{ item.failReason }}</text>
         </view>
         <view class="task-actions">
           <text class="task-link" @tap.stop="goDetail(item.taskId)">查看详情</text>
@@ -60,14 +73,33 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getMyTaskList } from '@/api/task'
-import { requireLogin } from '@/utils/auth'
+import { isLoggedIn, requireLogin } from '@/utils/auth'
 
 const loading = ref(false)
 const errorMessage = ref('')
 const tasks = ref([])
+const activeFilter = ref('ALL')
+
+const statusFilters = [
+  { label: '全部', value: 'ALL' },
+  { label: '待执行', value: 'PENDING' },
+  { label: '生成中', value: 'RUNNING' },
+  { label: '已完成', value: 'SUCCESS' },
+  { label: '失败', value: 'FAIL' }
+]
+
+const filteredTasks = computed(() => {
+  if (activeFilter.value === 'ALL') {
+    return tasks.value
+  }
+  if (activeFilter.value === 'RUNNING') {
+    return tasks.value.filter((item) => ['WAITING', 'RUNNING'].includes(item.status))
+  }
+  return tasks.value.filter((item) => item.status === activeFilter.value)
+})
 
 function statusText(status) {
   const map = {
@@ -101,6 +133,8 @@ function formatMode(mode) {
 
 async function loadData() {
   if (!requireLogin()) {
+    tasks.value = []
+    errorMessage.value = ''
     return
   }
   loading.value = true
@@ -121,8 +155,12 @@ function goDetail(taskId) {
   })
 }
 
-function goAppCenter() {
-  uni.switchTab({ url: '/pages/app/index' })
+function handleEmptyAction() {
+  if (isLoggedIn()) {
+    uni.switchTab({ url: '/pages/app/index' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/login/index' })
 }
 
 function repeatCreate(item) {
@@ -163,6 +201,26 @@ onShow(loadData)
   font-size: 25rpx;
 }
 
+.filter-row {
+  margin-top: 24rpx;
+  white-space: nowrap;
+}
+
+.filter-pill {
+  display: inline-flex;
+  margin-right: 14rpx;
+  padding: 12rpx 24rpx;
+  border-radius: 999rpx;
+  background: #171d33;
+  color: #92a0cf;
+  font-size: 24rpx;
+}
+
+.filter-pill.active {
+  background: linear-gradient(135deg, #4e36d8 0%, #3384ff 100%);
+  color: #fff;
+}
+
 .task-list {
   display: flex;
   flex-direction: column;
@@ -187,6 +245,10 @@ onShow(loadData)
   align-items: center;
   justify-content: space-between;
   gap: 16rpx;
+}
+
+.task-head-main {
+  flex: 1;
 }
 
 .task-model {
@@ -243,6 +305,14 @@ onShow(loadData)
   flex-wrap: wrap;
 }
 
+.task-fail {
+  display: block;
+  margin-top: 16rpx;
+  color: #ffb1b1;
+  font-size: 23rpx;
+  line-height: 1.6;
+}
+
 .task-actions {
   display: flex;
   justify-content: flex-end;
@@ -262,20 +332,20 @@ onShow(loadData)
 }
 
 .task-link.warn {
-  color: #efb44e;
+  color: #ffb37f;
 }
 
 .empty-title {
   display: block;
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 700;
 }
 
 .empty-desc {
   display: block;
   margin-top: 14rpx;
-  color: #9eabd8;
-  font-size: 25rpx;
+  color: #bcc7ef;
+  font-size: 24rpx;
   line-height: 1.7;
 }
 
@@ -283,8 +353,9 @@ onShow(loadData)
   margin-top: 24rpx;
   border: none;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #4d38d6 0%, #3578ff 100%);
+  background: linear-gradient(135deg, #4d38d6 0%, #2f7cff 100%);
   color: #fff;
+  font-size: 26rpx;
 }
 
 .state {

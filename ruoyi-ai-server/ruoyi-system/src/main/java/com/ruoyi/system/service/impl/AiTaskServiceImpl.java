@@ -1,9 +1,14 @@
 package com.ruoyi.system.service.impl;
 
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.uuid.IdUtils;
+import com.ruoyi.system.domain.AiProvider;
+import com.ruoyi.system.domain.AiProviderChannel;
 import com.ruoyi.system.domain.AiModel;
 import com.ruoyi.system.domain.AiModelVersion;
 import com.ruoyi.system.domain.AiChannelModelRelation;
@@ -14,14 +19,22 @@ import com.ruoyi.system.domain.vo.AppImageTaskSubmitBo;
 import com.ruoyi.system.mapper.AiTaskMapper;
 import com.ruoyi.system.mapper.AiTaskResultMapper;
 import com.ruoyi.system.mapper.AiWalletFlowMapper;
+import com.ruoyi.system.service.IAiProviderChannelService;
+import com.ruoyi.system.service.IAiProviderService;
 import com.ruoyi.system.service.IAiModelService;
 import com.ruoyi.system.service.IAiModelVersionService;
 import com.ruoyi.system.service.IAiChannelModelRelationService;
 import com.ruoyi.system.service.IAiTaskService;
 import com.ruoyi.system.service.IAiWalletService;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,9 +46,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AiTaskServiceImpl implements IAiTaskService
 {
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+
     private static final long MOCK_RUNNING_THRESHOLD_MS = 3_000L;
 
     private static final long MOCK_FINISH_THRESHOLD_MS = 8_000L;
+
+    private static final String PROVIDER_CODE_ZHIPU = "ZHIPU";
 
     @Autowired
     private AiTaskMapper aiTaskMapper;
@@ -53,10 +70,19 @@ public class AiTaskServiceImpl implements IAiTaskService
     private IAiChannelModelRelationService aiChannelModelRelationService;
 
     @Autowired
+    private IAiProviderChannelService aiProviderChannelService;
+
+    @Autowired
+    private IAiProviderService aiProviderService;
+
+    @Autowired
     private IAiWalletService aiWalletService;
 
     @Autowired
     private AiWalletFlowMapper aiWalletFlowMapper;
+
+    @Autowired
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     @Override
     public AiTask selectAiTaskById(Long taskId)
@@ -137,14 +163,14 @@ public class AiTaskServiceImpl implements IAiTaskService
         task.setStyleCode(bo.getStyleCode());
         task.setRatioCode(bo.getRatioCode());
         task.setSourceUrl(bo.getSourceUrl());
-        task.setStatus("PENDING");
+        task.setStatus(route == null ? "PENDING" : "WAITING");
         task.setPowerCost(version.getPowerCost());
         if (route != null)
         {
             task.setChannelId(route.getChannelId());
             task.setChannelModelRelationId(route.getRelationId());
             task.setRemoteModelName(route.getRemoteModelName());
-            task.setRemark("任务已创建，已匹配渠道路由：" + StringUtils.defaultIfBlank(route.getChannelName(), "未命名渠道"));
+            task.setRemark("任务已提交，等待渠道执行：" + StringUtils.defaultIfBlank(route.getChannelName(), "未命名渠道"));
         }
         else
         {
@@ -154,7 +180,16 @@ public class AiTaskServiceImpl implements IAiTaskService
         task.setSubmitTime(DateUtils.getNowDate());
         aiTaskMapper.insertAiTask(task);
         aiWalletService.consumePower(userId, version.getPowerCost(), "TASK_SUBMIT", task.getTaskId(), "提交图片生成任务扣减算力");
+        if (route != null)
+        {
+            dispatchRealImageTask(task.getTaskId(), model.getModelId(), version.getVersionId(), route.getRelationId());
+        }
         return aiTaskMapper.selectAiTaskById(task.getTaskId());
+    }
+
+    private void dispatchRealImageTask(Long taskId, Long modelId, Long versionId, Long relationId)
+    {
+        threadPoolTaskExecutor.execute(() -> executeRealImageTask(taskId, modelId, versionId, relationId));
     }
 
     private AiChannelModelRelation resolveChannelModelRelation(Long versionId)
@@ -164,6 +199,292 @@ public class AiTaskServiceImpl implements IAiTaskService
         query.setEnabled("0");
         List<AiChannelModelRelation> relationList = aiChannelModelRelationService.selectAiChannelModelRelationList(query);
         return relationList.isEmpty() ? null : relationList.get(0);
+    }
+
+    private void executeRealImageTask(Long taskId, Long modelId, Long versionId, Long relationId)
+    {
+        AiTask task = aiTaskMapper.selectAiTaskById(taskId);
+        AiModel model = aiModelService.selectAiModelById(modelId);
+        AiModelVersion version = aiModelVersionService.selectAiModelVersionById(versionId);
+        AiChannelModelRelation route = aiChannelModelRelationService.selectAiChannelModelRelationById(relationId);
+        if (task == null || model == null || version == null || route == null)
+        {
+            return;
+        }
+        if ("SUCCESS".equals(task.getStatus()) || "FAIL".equals(task.getStatus()))
+        {
+            return;
+        }
+        task.setStatus("RUNNING");
+        task.setRemark("模型正在生成结果，请稍候查看");
+        aiTaskMapper.updateAiTask(task);
+        try
+        {
+            doExecuteRealImageTask(task, model, version, route);
+        }
+        catch (Exception ex)
+        {
+            handleAsyncTaskFailure(task, ex);
+        }
+    }
+
+    private void doExecuteRealImageTask(AiTask task, AiModel model, AiModelVersion version, AiChannelModelRelation route)
+    {
+        if (route == null)
+        {
+            return;
+        }
+        AiProviderChannel channel = aiProviderChannelService.selectAiProviderChannelById(route.getChannelId());
+        if (channel == null || !"0".equals(channel.getStatus()))
+        {
+            throw new ServiceException("渠道不存在或已停用");
+        }
+        AiProvider provider = aiProviderService.selectAiProviderById(channel.getProviderId());
+        if (provider == null || !"0".equals(provider.getStatus()))
+        {
+            throw new ServiceException("提供商不存在或已停用");
+        }
+        if (PROVIDER_CODE_ZHIPU.equalsIgnoreCase(provider.getProviderCode()))
+        {
+            executeZhipuImageTask(task, version, route, channel);
+            return;
+        }
+        throw new ServiceException("当前渠道尚未接入实际执行器");
+    }
+
+    private void handleAsyncTaskFailure(AiTask task, Exception ex)
+    {
+        String message = ex instanceof ServiceException ? ex.getMessage() : "任务执行异常：" + ex.getMessage();
+        task.setStatus("FAIL");
+        task.setFailReason(StringUtils.defaultIfBlank(message, "任务执行失败"));
+        task.setResponsePayload(buildFailurePayload(task.getResponsePayload(), message));
+        task.setFinishTime(new Date());
+        task.setRemark("任务执行失败，已退回本次扣减算力");
+        aiTaskMapper.updateAiTask(task);
+        if (!hasRefunded(task.getTaskId()))
+        {
+            aiWalletService.grantPower(task.getUserId(), task.getPowerCost(), "TASK_REFUND", task.getTaskId(), "任务执行失败退回算力");
+        }
+    }
+
+    private void executeZhipuImageTask(AiTask task, AiModelVersion version, AiChannelModelRelation route, AiProviderChannel channel)
+    {
+        if (!"TEXT_TO_IMAGE".equalsIgnoreCase(task.getCreateMode()))
+        {
+            throw new ServiceException("智谱图像生成当前仅支持文生图");
+        }
+        if (StringUtils.isBlank(channel.getApiKey()))
+        {
+            throw new ServiceException("智谱渠道未配置 API Key");
+        }
+        String baseUrl = StringUtils.defaultIfBlank(channel.getBaseUrl(), "https://open.bigmodel.cn");
+        String requestUrl = buildZhipuRequestUrl(baseUrl);
+
+        JSONObject body = new JSONObject();
+        body.put("model", StringUtils.defaultIfBlank(route.getRemoteModelName(), StringUtils.defaultIfBlank(version.getApiModelName(), "glm-image")));
+        body.put("prompt", buildZhipuPrompt(task));
+        body.put("size", resolveZhipuSize(task.getRatioCode()));
+        body.put("watermark_enabled", false);
+        body.put("user_id", buildZhipuUserId(task.getUserId()));
+        task.setRequestPayload(buildRequestPayload(requestUrl, body, task, route, channel));
+        aiTaskMapper.updateAiTask(task);
+
+        String responseText;
+        try
+        {
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(requestUrl))
+                .timeout(Duration.ofMillis(resolveTimeoutMs(channel)))
+                .header("Authorization", "Bearer " + channel.getApiKey())
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body.toJSONString()))
+                .build();
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            responseText = response.body();
+            if (response.statusCode() < 200 || response.statusCode() >= 300)
+            {
+                throw new ServiceException("智谱接口调用失败：" + extractZhipuErrorMessage(responseText, response.statusCode()));
+            }
+        }
+        catch (ServiceException ex)
+        {
+            throw ex;
+        }
+        catch (Exception ex)
+        {
+            throw new ServiceException("智谱接口调用异常：" + ex.getMessage());
+        }
+
+        JSONObject responseJson = JSON.parseObject(responseText);
+        task.setResponsePayload(responseText);
+        JSONArray dataArray = responseJson.getJSONArray("data");
+        if (dataArray == null || dataArray.isEmpty())
+        {
+            aiTaskMapper.updateAiTask(task);
+            throw new ServiceException("智谱接口未返回图片结果");
+        }
+        String imageUrl = dataArray.getJSONObject(0).getString("url");
+        if (StringUtils.isBlank(imageUrl))
+        {
+            aiTaskMapper.updateAiTask(task);
+            throw new ServiceException("智谱接口返回的图片地址为空");
+        }
+
+        int[] size = resolveImageSize(task.getRatioCode());
+        AiTaskResult result = new AiTaskResult();
+        result.setTaskId(task.getTaskId());
+        result.setResultType("IMAGE");
+        result.setFileUrl(imageUrl);
+        result.setCoverUrl(imageUrl);
+        result.setWidth(size[0]);
+        result.setHeight(size[1]);
+        result.setSeqNo(1);
+        aiTaskResultMapper.insertAiTaskResult(result);
+
+        task.setStatus("SUCCESS");
+        task.setThirdTaskId(responseJson.getString("request_id"));
+        task.setFailReason("");
+        task.setFinishTime(new Date());
+        task.setRemark("智谱图像生成完成");
+        aiTaskMapper.updateAiTask(task);
+    }
+
+    private String buildRequestPayload(String requestUrl, JSONObject body, AiTask task, AiChannelModelRelation route, AiProviderChannel channel)
+    {
+        JSONObject payload = new JSONObject();
+        payload.put("providerCode", PROVIDER_CODE_ZHIPU);
+        payload.put("requestUrl", requestUrl);
+        payload.put("taskId", task.getTaskId());
+        payload.put("taskNo", task.getTaskNo());
+        payload.put("channelId", channel.getChannelId());
+        payload.put("channelCode", channel.getChannelCode());
+        payload.put("channelName", channel.getChannelName());
+        payload.put("relationId", route.getRelationId());
+        payload.put("remoteModelName", route.getRemoteModelName());
+        payload.put("headers", buildRequestHeaders(channel));
+        payload.put("body", body);
+        return JSON.toJSONString(payload);
+    }
+
+    private JSONObject buildRequestHeaders(AiProviderChannel channel)
+    {
+        JSONObject headers = new JSONObject();
+        headers.put("Content-Type", "application/json");
+        headers.put("Authorization", "Bearer " + maskApiKey(channel.getApiKey()));
+        return headers;
+    }
+
+    private String maskApiKey(String apiKey)
+    {
+        if (StringUtils.isBlank(apiKey))
+        {
+            return "";
+        }
+        if (apiKey.length() <= 8)
+        {
+            return "****";
+        }
+        return apiKey.substring(0, 4) + "****" + apiKey.substring(apiKey.length() - 4);
+    }
+
+    private String buildFailurePayload(String responsePayload, String errorMessage)
+    {
+        JSONObject payload = new JSONObject();
+        payload.put("errorMessage", errorMessage);
+        if (StringUtils.isNotBlank(responsePayload))
+        {
+            payload.put("rawResponse", responsePayload);
+        }
+        return JSON.toJSONString(payload);
+    }
+
+    private String buildZhipuRequestUrl(String baseUrl)
+    {
+        String normalized = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        if (normalized.endsWith("/api/paas/v4/images/generations"))
+        {
+            return normalized;
+        }
+        if (normalized.endsWith("/api/paas/v4"))
+        {
+            return normalized + "/images/generations";
+        }
+        return normalized + "/api/paas/v4/images/generations";
+    }
+
+    private int resolveTimeoutMs(AiProviderChannel channel)
+    {
+        return channel.getTimeoutMs() == null || channel.getTimeoutMs() <= 0 ? 60000 : channel.getTimeoutMs();
+    }
+
+    private String buildZhipuPrompt(AiTask task)
+    {
+        StringBuilder builder = new StringBuilder(StringUtils.defaultString(task.getPromptText()));
+        if (StringUtils.isNotBlank(task.getStyleCode()))
+        {
+            builder.append("，风格：").append(task.getStyleCode());
+        }
+        if (StringUtils.isNotBlank(task.getNegativePrompt()))
+        {
+            builder.append("。避免：").append(task.getNegativePrompt());
+        }
+        return builder.toString();
+    }
+
+    private String resolveZhipuSize(String ratio)
+    {
+        return switch (StringUtils.defaultIfBlank(ratio, "1:1"))
+        {
+            case "9:16" -> "768x1344";
+            case "16:9" -> "1344x768";
+            case "3:4" -> "864x1152";
+            case "4:3" -> "1152x864";
+            default -> "1024x1024";
+        };
+    }
+
+    private String buildZhipuUserId(Long userId)
+    {
+        String value = "app-user-" + StringUtils.defaultIfBlank(userId == null ? null : String.valueOf(userId), "guest");
+        if (value.length() < 6)
+        {
+            return StringUtils.rightPad(value, 6, '0');
+        }
+        return value.length() > 128 ? value.substring(0, 128) : value;
+    }
+
+    private int[] resolveImageSize(String ratio)
+    {
+        return switch (StringUtils.defaultIfBlank(ratio, "1:1"))
+        {
+            case "9:16" -> new int[] { 768, 1344 };
+            case "16:9" -> new int[] { 1344, 768 };
+            case "3:4" -> new int[] { 864, 1152 };
+            case "4:3" -> new int[] { 1152, 864 };
+            default -> new int[] { 1024, 1024 };
+        };
+    }
+
+    private String extractZhipuErrorMessage(String responseText, int statusCode)
+    {
+        try
+        {
+            JSONObject jsonObject = JSON.parseObject(responseText);
+            String message = jsonObject.getString("message");
+            if (StringUtils.isBlank(message))
+            {
+                JSONObject error = jsonObject.getJSONObject("error");
+                if (error != null)
+                {
+                    message = error.getString("message");
+                }
+            }
+            return StringUtils.defaultIfBlank(message, "HTTP " + statusCode);
+        }
+        catch (Exception ex)
+        {
+            return "HTTP " + statusCode;
+        }
     }
 
     @Override

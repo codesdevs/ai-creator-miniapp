@@ -183,6 +183,8 @@ create table if not exists ai_c_task (
     status               varchar(20)     default 'PENDING' comment '任务状态',
     power_cost           int             default 0 comment '消耗算力',
     third_task_id        varchar(128)    default '' comment '第三方任务ID',
+    request_payload      longtext        comment '请求载荷',
+    response_payload     longtext        comment '响应载荷',
     fail_reason          varchar(255)    default '' comment '失败原因',
     submit_time          datetime        default null comment '提交时间',
     finish_time          datetime        default null comment '完成时间',
@@ -326,28 +328,257 @@ create table if not exists ai_c_card_code (
     key idx_ai_c_card_code_status (status)
 ) engine=innodb auto_increment=1 comment='卡密表';
 
-alter table ai_c_model add column if not exists official_provider_id bigint default null comment '官方提供商ID';
-alter table ai_c_model add column if not exists capabilities text comment '能力标签JSON';
-alter table ai_c_model_version add column if not exists api_model_name varchar(128) default '' comment '实际请求模型名';
-alter table ai_c_model_version add column if not exists context_length int default 0 comment '上下文长度';
-alter table ai_c_model_version add column if not exists input_price decimal(10,4) default 0.0000 comment '输入单价';
-alter table ai_c_model_version add column if not exists output_price decimal(10,4) default 0.0000 comment '输出单价';
-alter table ai_c_model_version add column if not exists speed_level int default 0 comment '速度等级';
-alter table ai_c_model_version add column if not exists quality_level int default 0 comment '质量等级';
-alter table ai_c_task add column if not exists channel_id bigint default null comment '渠道ID';
-alter table ai_c_task add column if not exists channel_model_relation_id bigint default null comment '渠道模型映射ID';
-alter table ai_c_task add column if not exists remote_model_name varchar(128) default '' comment '渠道实际模型名';
-alter table ai_c_channel_model_relation add column if not exists remote_model_name varchar(128) not null comment '渠道实际模型名';
-alter table ai_c_channel_model_relation add column if not exists enabled char(1) default '0' comment '状态（0启用 1停用）';
-alter table ai_c_channel_model_relation add column if not exists price_ratio decimal(10,4) default 1.0000 comment '价格系数';
-alter table ai_c_channel_model_relation add column if not exists priority int default 0 comment '优先级';
-alter table ai_c_channel_model_relation add column if not exists weight int default 100 comment '权重';
-alter table ai_c_channel_model_relation add column if not exists max_qps int default 0 comment '最大QPS';
-alter table ai_c_channel_model_relation add column if not exists remark varchar(500) default '' comment '备注';
-alter table ai_c_channel_model_relation add column if not exists create_by varchar(64) default '' comment '创建者';
-alter table ai_c_channel_model_relation add column if not exists create_time datetime default current_timestamp comment '创建时间';
-alter table ai_c_channel_model_relation add column if not exists update_by varchar(64) default '' comment '更新者';
-alter table ai_c_channel_model_relation add column if not exists update_time datetime default null comment '更新时间';
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model add column official_provider_id bigint default null comment ''官方提供商ID''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model' and column_name = 'official_provider_id'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model add column capabilities text comment ''能力标签JSON''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model' and column_name = 'capabilities'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model_version add column api_model_name varchar(128) default '''' comment ''实际请求模型名''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model_version' and column_name = 'api_model_name'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model_version add column context_length int default 0 comment ''上下文长度''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model_version' and column_name = 'context_length'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model_version add column input_price decimal(10,4) default 0.0000 comment ''输入单价''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model_version' and column_name = 'input_price'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model_version add column output_price decimal(10,4) default 0.0000 comment ''输出单价''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model_version' and column_name = 'output_price'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model_version add column speed_level int default 0 comment ''速度等级''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model_version' and column_name = 'speed_level'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model_version add column quality_level int default 0 comment ''质量等级''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model_version' and column_name = 'quality_level'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_task add column channel_id bigint default null comment ''渠道ID''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_task' and column_name = 'channel_id'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_task add column channel_model_relation_id bigint default null comment ''渠道模型映射ID''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_task' and column_name = 'channel_model_relation_id'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_task add column remote_model_name varchar(128) default '''' comment ''渠道实际模型名''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_task' and column_name = 'remote_model_name'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_task add column request_payload longtext comment ''请求载荷''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_task' and column_name = 'request_payload'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_task add column response_payload longtext comment ''响应载荷''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_task' and column_name = 'response_payload'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column remote_model_name varchar(128) not null comment ''渠道实际模型名''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'remote_model_name'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column enabled char(1) default ''0'' comment ''状态（0启用 1停用）''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'enabled'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column price_ratio decimal(10,4) default 1.0000 comment ''价格系数''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'price_ratio'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column priority int default 0 comment ''优先级''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'priority'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column weight int default 100 comment ''权重''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'weight'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column max_qps int default 0 comment ''最大QPS''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'max_qps'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column remark varchar(500) default '''' comment ''备注''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'remark'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column create_by varchar(64) default '''' comment ''创建者''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'create_by'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column create_time datetime default current_timestamp comment ''创建时间''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'create_time'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column update_by varchar(64) default '''' comment ''更新者''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'update_by'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_channel_model_relation add column update_time datetime default null comment ''更新时间''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_channel_model_relation' and column_name = 'update_time'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column package_name varchar(64) default '''' comment ''卡包名称''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'package_name'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column power_num int default 0 comment ''基础算力''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'power_num'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column bonus_power_num int default 0 comment ''赠送算力''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'bonus_power_num'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column status char(1) default ''0'' comment ''状态（0未使用 1已使用 2停用）''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'status'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column used_user_id bigint default null comment ''使用用户ID''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'used_user_id'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column order_id bigint default null comment ''关联订单ID''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'order_id'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column used_time datetime default null comment ''使用时间''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'used_time'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column create_by varchar(64) default '''' comment ''创建者''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'create_by'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column create_time datetime default current_timestamp comment ''创建时间''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'create_time'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column update_by varchar(64) default '''' comment ''更新者''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'update_by'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column update_time datetime default null comment ''更新时间''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'update_time'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_card_code add column remark varchar(500) default '''' comment ''备注''', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_card_code' and column_name = 'remark'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
 
 insert into ai_c_provider (provider_id, provider_name, provider_code, provider_type, status, create_by, remark)
 values
@@ -355,7 +586,8 @@ values
     (2, '阿里云', 'ALIBABA', 'OFFICIAL', '0', 'admin', '通义系列官方提供商'),
     (3, '快手', 'KUAISHOU', 'OFFICIAL', '0', 'admin', '可灵模型官方提供商'),
     (4, 'OpenAI', 'OPENAI', 'OFFICIAL', '0', 'admin', 'OpenAI 官方提供商'),
-    (5, 'Anthropic', 'ANTHROPIC', 'OFFICIAL', '0', 'admin', 'Anthropic 官方提供商')
+    (5, 'Anthropic', 'ANTHROPIC', 'OFFICIAL', '0', 'admin', 'Anthropic 官方提供商'),
+    (6, '智谱AI', 'ZHIPU', 'OFFICIAL', '0', 'admin', '智谱官方提供商')
 on duplicate key update provider_name = values(provider_name), provider_type = values(provider_type), status = values(status), remark = values(remark);
 
 update ai_c_model m
@@ -376,8 +608,28 @@ values
     (1, 1, 'jimeng-3.0', '即梦3.0', 20, '["1:1","9:16","16:9"]', '["CUSTOM","ANIME","PHOTO"]', 'TEXT_TO_IMAGE,IMAGE_TO_IMAGE', '0', 'admin'),
     (2, 1, 'jimeng-4.0', '即梦4.0', 30, '["1:1","9:16","16:9"]', '["CUSTOM","ANIME","PHOTO"]', 'TEXT_TO_IMAGE,IMAGE_TO_IMAGE', '0', 'admin'),
     (3, 2, 'wanxiang-v1', '通义万象 V1', 25, '["1:1","3:4","4:3"]', '["CUSTOM","CHINESE","PHOTO"]', 'TEXT_TO_IMAGE', '0', 'admin'),
-    (4, 3, 'keling-v1', '可灵视频 V1', 50, '["16:9","9:16"]', '["CINEMATIC","REALISTIC"]', 'TEXT_TO_VIDEO,IMAGE_TO_VIDEO', '0', 'admin')
+    (4, 3, 'keling-v1', '可灵视频 V1', 50, '["16:9","9:16"]', '["CINEMATIC","REALISTIC"]', 'TEXT_TO_VIDEO,IMAGE_TO_VIDEO', '0', 'admin'),
+    (10, 10, 'glm-image-v1', 'GLM Image', 15, '["1:1","3:4","4:3","9:16","16:9"]', '["PHOTO","ILLUSTRATION","POSTER"]', 'TEXT_TO_IMAGE', '0', 'admin')
 on duplicate key update version_name = values(version_name), power_cost = values(power_cost), status = values(status);
+
+insert into ai_c_model
+    (model_id, model_code, model_name, model_type, provider, official_provider_id, capabilities, intro, status, sort, create_by)
+values
+    (10, 'glm-image', '智谱文生图', 'IMAGE', 'ZHIPU', 6, '["text_to_image"]', '智谱官方文生图模型', '0', 10, 'admin')
+on duplicate key update model_name = values(model_name), provider = values(provider), official_provider_id = values(official_provider_id),
+    capabilities = values(capabilities), intro = values(intro), status = values(status), sort = values(sort);
+
+insert into ai_c_provider_channel
+    (channel_id, provider_id, channel_name, channel_code, base_url, api_key, api_secret, proxy_enabled, priority, weight, timeout_ms, max_concurrency, rpm_limit, tpm_limit, is_fallback, health_status, status, remark, create_by, create_time)
+values
+    (10, 6, '智谱官方', 'ZHIPU_OFFICIAL', 'https://open.bigmodel.cn', '', '', '0', 0, 100, 60000, 0, 0, 0, '0', 'UNKNOWN', '1', '请填写 API Key 后启用', 'admin', sysdate())
+on duplicate key update provider_id = values(provider_id), channel_name = values(channel_name), base_url = values(base_url), remark = values(remark);
+
+insert into ai_c_channel_model_relation
+    (relation_id, channel_id, model_version_id, remote_model_name, enabled, price_ratio, priority, weight, max_qps, remark, create_by, create_time)
+values
+    (10, 10, 10, 'glm-image', '1', 1.0000, 0, 100, 0, '请启用渠道后再启用此映射', 'admin', sysdate())
+on duplicate key update remote_model_name = values(remote_model_name), remark = values(remark);
 
 insert into ai_c_wallet (wallet_id, user_id, balance_power, freeze_power, total_recharge_power, total_consume_power, total_give_power, update_time)
 values

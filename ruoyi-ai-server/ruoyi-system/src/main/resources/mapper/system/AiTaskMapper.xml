@@ -24,6 +24,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="thirdTaskId" column="third_task_id"/>
         <result property="remoteModelName" column="remote_model_name"/>
         <result property="failReason" column="fail_reason"/>
+        <result property="requestPayload" column="request_payload"/>
+        <result property="responsePayload" column="response_payload"/>
         <result property="submitTime" column="submit_time"/>
         <result property="finishTime" column="finish_time"/>
         <result property="createBy" column="create_by"/>
@@ -42,7 +44,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                t.task_type, t.create_mode,
                cast(t.prompt_text as char) as prompt_text, cast(t.negative_prompt as char) as negative_prompt,
                t.style_code, t.ratio_code, t.source_url, t.status, t.power_cost, t.third_task_id, t.remote_model_name,
-               t.fail_reason, t.submit_time, t.finish_time, t.create_by, t.create_time, t.update_by, t.update_time,
+               t.fail_reason, cast(t.request_payload as char) as request_payload, cast(t.response_payload as char) as response_payload,
+               t.submit_time, t.finish_time, t.create_by, t.create_time, t.update_by, t.update_time,
                t.remark, m.model_name, v.version_name, p.provider_name, c.channel_name
         from ai_c_task t
         left join ai_c_model m on m.model_id = t.model_id
@@ -91,8 +94,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="thirdTaskId != null and thirdTaskId != ''">third_task_id,</if>
             <if test="remoteModelName != null and remoteModelName != ''">remote_model_name,</if>
             <if test="failReason != null and failReason != ''">fail_reason,</if>
-            <if test="submitTime != null and submitTime != ''">submit_time,</if>
-            <if test="finishTime != null and finishTime != ''">finish_time,</if>
+            <if test="requestPayload != null and requestPayload != ''">request_payload,</if>
+            <if test="responsePayload != null and responsePayload != ''">response_payload,</if>
+            <if test="submitTime != null">submit_time,</if>
+            <if test="finishTime != null">finish_time,</if>
             <if test="createBy != null and createBy != ''">create_by,</if>
             <if test="remark != null and remark != ''">remark,</if>
             create_time
@@ -116,8 +121,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="thirdTaskId != null and thirdTaskId != ''">#{thirdTaskId},</if>
             <if test="remoteModelName != null and remoteModelName != ''">#{remoteModelName},</if>
             <if test="failReason != null and failReason != ''">#{failReason},</if>
-            <if test="submitTime != null and submitTime != ''">#{submitTime},</if>
-            <if test="finishTime != null and finishTime != ''">#{finishTime},</if>
+            <if test="requestPayload != null and requestPayload != ''">#{requestPayload},</if>
+            <if test="responsePayload != null and responsePayload != ''">#{responsePayload},</if>
+            <if test="submitTime != null">#{submitTime},</if>
+            <if test="finishTime != null">#{finishTime},</if>
             <if test="createBy != null and createBy != ''">#{createBy},</if>
             <if test="remark != null and remark != ''">#{remark},</if>
             sysdate()
@@ -130,6 +137,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="status != null and status != ''">status = #{status},</if>
             <if test="thirdTaskId != null">third_task_id = #{thirdTaskId},</if>
             <if test="failReason != null">fail_reason = #{failReason},</if>
+            <if test="requestPayload != null">request_payload = #{requestPayload},</if>
+            <if test="responsePayload != null">response_payload = #{responsePayload},</if>
             <if test="finishTime != null">finish_time = #{finishTime},</if>
             <if test="remark != null">remark = #{remark},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>

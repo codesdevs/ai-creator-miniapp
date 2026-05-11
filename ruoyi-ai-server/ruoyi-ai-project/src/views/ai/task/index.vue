@@ -20,6 +20,7 @@
       <el-form-item label="任务状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择任务状态" clearable style="width: 160px">
           <el-option label="待执行" value="PENDING" />
+          <el-option label="排队中" value="WAITING" />
           <el-option label="执行中" value="RUNNING" />
           <el-option label="成功" value="SUCCESS" />
           <el-option label="失败" value="FAIL" />
@@ -83,6 +84,12 @@
         <el-descriptions-item label="提示词" :span="2">{{ detail.task.promptText || '-' }}</el-descriptions-item>
         <el-descriptions-item label="反向提示词" :span="2">{{ detail.task.negativePrompt || '-' }}</el-descriptions-item>
         <el-descriptions-item label="原图地址" :span="2">{{ detail.task.sourceUrl || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="请求参数" :span="2">
+          <pre class="payload-pre">{{ formatPayload(detail.task.requestPayload) }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item label="响应内容" :span="2">
+          <pre class="payload-pre">{{ formatPayload(detail.task.responsePayload) }}</pre>
+        </el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ detail.task.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
 
@@ -105,6 +112,7 @@
         <el-form-item label="处理状态" prop="status">
           <el-select v-model="processForm.status" placeholder="请选择状态" style="width: 100%">
             <el-option label="待执行" value="PENDING" />
+            <el-option label="排队中" value="WAITING" />
             <el-option label="执行中" value="RUNNING" />
             <el-option label="成功" value="SUCCESS" />
             <el-option label="失败" value="FAIL" />
@@ -229,8 +237,20 @@ function submitProcess() {
 function statusTagType(status) {
   if (status === "SUCCESS") return "success"
   if (status === "FAIL") return "danger"
+  if (status === "WAITING") return "info"
   if (status === "RUNNING") return "warning"
   return "info"
+}
+
+function formatPayload(payload) {
+  if (!payload) {
+    return "-"
+  }
+  try {
+    return JSON.stringify(JSON.parse(payload), null, 2)
+  } catch (error) {
+    return payload
+  }
 }
 
 if (route.query.userId) {
@@ -243,3 +263,14 @@ if (route.query.taskNo) {
 
 getList()
 </script>
+
+<style scoped>
+.payload-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+</style>

@@ -53,6 +53,10 @@ public class AiTask extends BaseEntity
 
     private String failReason;
 
+    private String requestPayload;
+
+    private String responsePayload;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date submitTime;
 
@@ -257,6 +261,26 @@ public class AiTask extends BaseEntity
         this.failReason = failReason;
     }
 
+    public String getRequestPayload()
+    {
+        return requestPayload;
+    }
+
+    public void setRequestPayload(String requestPayload)
+    {
+        this.requestPayload = requestPayload;
+    }
+
+    public String getResponsePayload()
+    {
+        return responsePayload;
+    }
+
+    public void setResponsePayload(String responsePayload)
+    {
+        this.responsePayload = responsePayload;
+    }
+
     public Date getSubmitTime()
     {
         return submitTime;
@@ -337,6 +361,8 @@ public class AiTask extends BaseEntity
             .append("powerCost", getPowerCost())
             .append("thirdTaskId", getThirdTaskId())
             .append("failReason", getFailReason())
+            .append("requestPayload", getRequestPayload())
+            .append("responsePayload", getResponsePayload())
             .append("submitTime", getSubmitTime())
             .append("finishTime", getFinishTime())
             .append("createTime", getCreateTime())

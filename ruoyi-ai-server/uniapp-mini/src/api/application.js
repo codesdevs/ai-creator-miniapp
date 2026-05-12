@@ -12,3 +12,11 @@ export function getApplicationDetail(data) {
     data
   })
 }
+
+export function submitApplication(data) {
+  return request({
+    url: '/app/application/submit',
+    method: 'POST',
+    data
+  })
+}

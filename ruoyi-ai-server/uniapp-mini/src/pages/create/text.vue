@@ -9,14 +9,12 @@
 
       <view class="intro-card">
         <text class="intro-title">☻ 功能介绍</text>
-        <text class="intro-desc">
-          智能生成高质量文案，覆盖营销、广告、社交媒体等场景。AI基于大数据分析，快速产出创意内容，提升创作效率。
-        </text>
+        <text class="intro-desc">{{ appIntro }}</text>
       </view>
 
       <view class="mode-grid">
         <view
-          v-for="item in modes"
+          v-for="item in displayModes"
           :key="item.code"
           :class="['mode-card', activeMode.code === item.code ? 'active' : '']"
           @tap="activeCode = item.code"
@@ -66,7 +64,7 @@
         <text class="mini-icon">◌</text>
         <text>算力清单</text>
       </view>
-      <button class="submit-btn" @tap="handleCreate">立即创作（消耗2算力）</button>
+      <button class="submit-btn" @tap="handleCreate">立即创作（消耗{{ activeMode.powerCost }}算力）</button>
     </view>
   </view>
 </template>
@@ -74,19 +72,22 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { getApplicationDetail } from '@/api/application'
 
 const balancePower = ref(0)
 const contentText = ref('')
 const activeCode = ref('copy_create')
 const lengthValue = ref('short')
+const remoteApp = ref(null)
+const remoteModes = ref([])
 
-const modes = [
-  { code: 'copy_create', name: '文案创作', placeholder: '请输入文案创作的提示词和创作要求' },
-  { code: 'imitate', name: '文案仿写', placeholder: '请输入对应的文案内容，如整段的文案内容' },
-  { code: 'polish', name: '文案润色', placeholder: '请输入对应的文案内容，如整段的文案内容' },
-  { code: 'expand', name: '文案扩写', placeholder: '请输入需要扩写的文案内容' },
-  { code: 'correct', name: '文案订正', placeholder: '请输入需要订正的文案内容' },
-  { code: 'summary', name: '文案精简', placeholder: '请输入需要精简的文案内容' }
+const fallbackModes = [
+  { code: 'copy_create', name: '文案创作', placeholder: '请输入文案创作的提示词和创作要求', powerCost: 2 },
+  { code: 'imitate', name: '文案仿写', placeholder: '请输入对应的文案内容，如整段的文案内容', powerCost: 2 },
+  { code: 'polish', name: '文案润色', placeholder: '请输入对应的文案内容，如整段的文案内容', powerCost: 2 },
+  { code: 'expand', name: '文案扩写', placeholder: '请输入需要扩写的文案内容', powerCost: 2 },
+  { code: 'correct', name: '文案订正', placeholder: '请输入需要订正的文案内容', powerCost: 2 },
+  { code: 'summary', name: '文案精简', placeholder: '请输入需要精简的文案内容', powerCost: 2 }
 ]
 
 const lengthOptions = [
@@ -95,7 +96,32 @@ const lengthOptions = [
   { label: '长篇', value: 'long' }
 ]
 
-const activeMode = computed(() => modes.find((item) => item.code === activeCode.value) || modes[0])
+const displayModes = computed(() => remoteModes.value.length ? remoteModes.value : fallbackModes)
+const activeMode = computed(() => displayModes.value.find((item) => item.code === activeCode.value) || displayModes.value[0] || fallbackModes[0])
+const appIntro = computed(() => remoteApp.value?.intro || '智能生成高质量文案，覆盖营销、广告、社交媒体等场景。AI基于大数据分析，快速产出创意内容，提升创作效率。')
+
+function normalizeMode(item) {
+  return {
+    code: item.modeCode,
+    name: item.modeName,
+    placeholder: item.placeholder || '请输入创作内容',
+    powerCost: item.powerCost || 2
+  }
+}
+
+async function loadDetail(preferredCode) {
+  try {
+    const res = await getApplicationDetail({ appCode: 'copywriting' })
+    remoteApp.value = res.data?.app || null
+    remoteModes.value = (res.data?.modeList || []).map(normalizeMode).filter((item) => item.code)
+    if (preferredCode && remoteModes.value.some((item) => item.code === preferredCode)) {
+      activeCode.value = preferredCode
+    }
+  } catch (error) {
+    remoteApp.value = null
+    remoteModes.value = []
+  }
+}
 
 function goAssets() {
   uni.switchTab({ url: '/pages/assets/index' })
@@ -115,8 +141,9 @@ onLoad((options) => {
     revise: 'correct'
   }
   const optionMode = modeMap[options.mode] || options.mode
-  const mode = modes.find((item) => item.code === optionMode)
+  const mode = fallbackModes.find((item) => item.code === optionMode)
   activeCode.value = mode?.code || 'copy_create'
+  loadDetail(activeCode.value)
 })
 </script>
 

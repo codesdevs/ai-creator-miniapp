@@ -196,6 +196,11 @@ public class AiTaskServiceImpl implements IAiTaskService
             task.setUserId(userId);
             task.setModelId(model.getModelId());
             task.setModelVersionId(version.getVersionId());
+            task.setAppId(bo.getAppId());
+            task.setModeId(bo.getModeId());
+            task.setStyleId(bo.getStyleId());
+            task.setSizeCode(bo.getSizeCode());
+            task.setInputParams(bo.getInputParams());
             task.setTaskType("IMAGE");
             task.setCreateMode(bo.getCreateMode());
             task.setPromptText(bo.getPromptText());
@@ -250,13 +255,17 @@ public class AiTaskServiceImpl implements IAiTaskService
     private String buildImageSubmitFingerprint(AppImageTaskSubmitBo bo)
     {
         JSONObject payload = new JSONObject();
+        payload.put("appId", bo.getAppId());
+        payload.put("modeId", bo.getModeId());
         payload.put("modelId", bo.getModelId());
         payload.put("versionId", bo.getVersionId());
         payload.put("createMode", StringUtils.trim(bo.getCreateMode()));
         payload.put("promptText", StringUtils.trim(bo.getPromptText()));
         payload.put("negativePrompt", StringUtils.trim(bo.getNegativePrompt()));
         payload.put("styleCode", StringUtils.trim(bo.getStyleCode()));
+        payload.put("styleId", bo.getStyleId());
         payload.put("ratioCode", StringUtils.trim(bo.getRatioCode()));
+        payload.put("sizeCode", StringUtils.trim(bo.getSizeCode()));
         payload.put("sourceUrl", StringUtils.trim(bo.getSourceUrl()));
         return DigestUtils.md5DigestAsHex(JSON.toJSONString(payload).getBytes(StandardCharsets.UTF_8));
     }

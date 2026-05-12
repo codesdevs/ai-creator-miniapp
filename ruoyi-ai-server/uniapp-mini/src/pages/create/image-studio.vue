@@ -10,7 +10,7 @@
       <scroll-view class="model-tabs" scroll-x>
         <view class="model-tabs-inner">
           <view
-            v-for="item in models"
+            v-for="item in displayModels"
             :key="item.code"
             :class="['model-tab', activeModel.code === item.code ? 'active' : '']"
             @tap="selectModel(item.code)"
@@ -25,7 +25,7 @@
           v-for="item in activeModel.versions"
           :key="item.code"
           :class="['option-card', activeVersion.code === item.code ? 'active' : '']"
-          @tap="activeVersionCode = item.code"
+          @tap="selectVersion(item.code)"
         >
           {{ item.name }}
         </view>
@@ -68,7 +68,7 @@
       <text class="section-title">风格选择</text>
       <view class="style-grid">
         <view
-          v-for="item in styles"
+          v-for="item in displayStyles"
           :key="item.code"
           :class="['style-card', styleCode === item.code ? 'active' : '']"
           :style="{ background: item.background }"
@@ -81,7 +81,7 @@
       <text class="section-title">图像比例</text>
       <view class="ratio-grid">
         <view
-          v-for="item in ratios"
+          v-for="item in displayRatios"
           :key="item.value"
           :class="['ratio-card', ratioValue === item.value ? 'active' : '']"
           @tap="ratioValue = item.value"
@@ -94,7 +94,7 @@
       <text class="section-title">图片大小</text>
       <view class="size-grid">
         <view
-          v-for="item in sizes"
+          v-for="item in displaySizes"
           :key="item.value"
           :class="['size-card', sizeValue === item.value ? 'active' : '']"
           @tap="sizeValue = item.value"
@@ -127,8 +127,11 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { getApplicationDetail, submitApplication } from '@/api/application'
+import { requireLogin } from '@/utils/auth'
 
 const balancePower = ref(0)
+const remoteApp = ref(null)
 const activeModelCode = ref('jimeng')
 const activeVersionCode = ref('jimeng-3')
 const createMode = ref('TEXT_TO_IMAGE')
@@ -136,8 +139,10 @@ const promptText = ref('')
 const styleCode = ref('custom')
 const ratioValue = ref('9:16')
 const sizeValue = ref('2K')
+const remoteModels = ref([])
+const submitting = ref(false)
 
-const models = [
+const fallbackModels = [
   {
     code: 'sora2',
     name: 'Sora',
@@ -174,7 +179,7 @@ const modeOptions = [
   { label: '图生图片', value: 'IMAGE_TO_IMAGE' }
 ]
 
-const styles = [
+const fallbackStyles = [
   { code: 'custom', name: '自定义', background: 'linear-gradient(135deg, #f6f1e7, #d8d1c5)' },
   { code: 'gongbi', name: '新工笔画', background: 'linear-gradient(135deg, #efe6d5, #9b8f76)' },
   { code: 'vangogh', name: '梵高风', background: 'linear-gradient(135deg, #193a73, #f3d35a)' },
@@ -193,7 +198,7 @@ const styles = [
   { code: 'pixel', name: '像素风', background: 'linear-gradient(135deg, #207cff, #ffca2f)' }
 ]
 
-const ratios = [
+const fallbackRatios = [
   { label: '9:16', value: '9:16', icon: 'portrait' },
   { label: '16:9', value: '16:9', icon: 'landscape' },
   { label: '1:1', value: '1:1', icon: 'square' },
@@ -202,20 +207,158 @@ const ratios = [
   { label: '21:9', value: '21:9', icon: 'wide' }
 ]
 
-const sizes = [
+const fallbackSizes = [
   { label: '1K', value: '1K', extraCost: -2 },
   { label: '2K', value: '2K', extraCost: 0 },
   { label: '4K', value: '4K', extraCost: 4 }
 ]
 
-const activeModel = computed(() => models.find((item) => item.code === activeModelCode.value) || models[2])
+const styleBackgroundMap = {
+  CUSTOM: 'linear-gradient(135deg, #f6f1e7, #d8d1c5)',
+  GONGBI: 'linear-gradient(135deg, #efe6d5, #9b8f76)',
+  VAN_GOGH: 'linear-gradient(135deg, #193a73, #f3d35a)',
+  CHINESE: 'linear-gradient(135deg, #f5dede, #7f8f72)',
+  FANTASY: 'linear-gradient(135deg, #6d7cff, #f6d771)',
+  ANIME: 'linear-gradient(135deg, #92e7ff, #f6f0ff)',
+  CARTOON: 'linear-gradient(135deg, #5f4bd8, #f887d1)',
+  REALISTIC: 'linear-gradient(135deg, #f4d1a9, #463424)',
+  SKETCH: 'linear-gradient(135deg, #f4f4f4, #656565)',
+  PHOTO: 'linear-gradient(135deg, #c8dfb4, #d79b88)',
+  CLAY: 'linear-gradient(135deg, #f1c65d, #f9e0a5)',
+  BLACK_WHITE: 'linear-gradient(135deg, #111111, #e8e8e8)',
+  JAPANESE_ANIME: 'linear-gradient(135deg, #48a8ff, #ff7b8a)',
+  MOVIE: 'linear-gradient(135deg, #0b2846, #f59d33)',
+  WATERCOLOR: 'linear-gradient(135deg, #d5efff, #fff2ca)',
+  PIXEL: 'linear-gradient(135deg, #207cff, #ffca2f)'
+}
+
+const displayModels = computed(() => remoteModels.value.length ? remoteModels.value : fallbackModels)
+const activeModel = computed(() => displayModels.value.find((item) => item.code === activeModelCode.value) || displayModels.value[0] || fallbackModels[2])
 const activeVersion = computed(() => activeModel.value.versions.find((item) => item.code === activeVersionCode.value) || activeModel.value.versions[0])
-const activeSize = computed(() => sizes.find((item) => item.value === sizeValue.value) || sizes[1])
+const displayStyles = computed(() => activeVersion.value?.styles?.length ? activeVersion.value.styles : fallbackStyles)
+const displayRatios = computed(() => activeVersion.value?.ratios?.length ? activeVersion.value.ratios : fallbackRatios)
+const displaySizes = computed(() => activeVersion.value?.sizes?.length ? activeVersion.value.sizes : fallbackSizes)
+const activeSize = computed(() => displaySizes.value.find((item) => item.value === sizeValue.value) || displaySizes.value[1] || fallbackSizes[1])
 const currentCost = computed(() => Math.max(1, activeVersion.value.cost + activeSize.value.extraCost))
 
 function selectModel(code) {
   activeModelCode.value = code
   activeVersionCode.value = activeModel.value.versions[0].code
+  applyVersionDefaults()
+}
+
+function selectVersion(code) {
+  activeVersionCode.value = code
+  applyVersionDefaults()
+}
+
+function parseJsonArray(value, fallback = []) {
+  if (Array.isArray(value)) {
+    return value
+  }
+  if (!value) {
+    return fallback
+  }
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : fallback
+  } catch (error) {
+    return fallback
+  }
+}
+
+function normalizeRatio(value) {
+  const iconMap = {
+    '9:16': 'portrait',
+    '16:9': 'landscape',
+    '1:1': 'square',
+    '4:3': 'landscape',
+    '3:4': 'photo',
+    '21:9': 'wide'
+  }
+  return { label: value, value, icon: iconMap[value] || 'square' }
+}
+
+function normalizeSize(value) {
+  const costMap = {
+    '1K': -2,
+    '2K': 0,
+    '4K': 4
+  }
+  return { label: value, value, extraCost: costMap[value] || 0 }
+}
+
+function normalizeStyle(item) {
+  const code = item.styleCode || item.code || 'CUSTOM'
+  return {
+    styleId: item.styleId,
+    code,
+    name: item.styleName || item.name || code,
+    background: item.coverUrl ? `url(${item.coverUrl}) center/cover` : (styleBackgroundMap[code] || 'linear-gradient(135deg, #2a2733, #171129)')
+  }
+}
+
+function normalizeVersion(item) {
+  const ratios = parseJsonArray(item.supportRatio, []).map(normalizeRatio)
+  const sizes = parseJsonArray(item.supportSize, []).map(normalizeSize)
+  const styles = (item.params?.styleList || []).map(normalizeStyle)
+  return {
+    versionId: item.versionId,
+    code: item.versionCode,
+    name: item.versionName,
+    cost: item.powerCost || 20,
+    intro: item.versionIntro || item.intro || '当前版本支持图片生成与编辑。',
+    ratios,
+    sizes,
+    styles,
+    defaultRatio: item.defaultRatio,
+    defaultSize: item.defaultSize
+  }
+}
+
+function normalizeModel(item) {
+  return {
+    modelId: item.modelId,
+    code: item.modelCode || item.displayName || String(item.modelId),
+    name: item.displayName || item.modelName || item.modelCode,
+    versions: (item.versionList || []).map(normalizeVersion).filter((version) => version.code)
+  }
+}
+
+function applyVersionDefaults() {
+  const version = activeVersion.value
+  if (!version) {
+    return
+  }
+  const ratios = version.ratios?.length ? version.ratios : fallbackRatios
+  const sizes = version.sizes?.length ? version.sizes : fallbackSizes
+  const styles = version.styles?.length ? version.styles : fallbackStyles
+  ratioValue.value = version.defaultRatio || ratios[0]?.value || '9:16'
+  sizeValue.value = version.defaultSize || sizes[1]?.value || sizes[0]?.value || '2K'
+  styleCode.value = styles[0]?.code || 'custom'
+}
+
+async function loadDetail(preferredModel) {
+  try {
+    const res = await getApplicationDetail({ appCode: 'image_create' })
+    remoteApp.value = res.data?.app || null
+    const modelList = (res.data?.modelList || []).map(normalizeModel).filter((item) => item.versions.length)
+    if (modelList.length) {
+      const target = modelList.find((item) => item.code === preferredModel)
+      if (preferredModel && !target) {
+        remoteModels.value = []
+        return
+      }
+      remoteModels.value = modelList
+      const model = target || modelList[0]
+      activeModelCode.value = model.code
+      activeVersionCode.value = model.versions[0].code
+      applyVersionDefaults()
+    }
+  } catch (error) {
+    remoteApp.value = null
+    remoteModels.value = []
+  }
 }
 
 function goAssets() {
@@ -226,14 +369,70 @@ function goWorks() {
   uni.switchTab({ url: '/pages/works/index' })
 }
 
-function handleCreate() {
-  uni.showToast({ title: '原型页：后续接入统一应用提交接口', icon: 'none' })
+function buildClientRequestId() {
+  return `app-img-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function validateBeforeSubmit() {
+  if (!promptText.value.trim()) {
+    uni.showToast({ title: '请输入图片描述', icon: 'none' })
+    return false
+  }
+  if (!activeModel.value.modelId || !activeVersion.value.versionId) {
+    uni.showToast({ title: '当前模型未接入提交接口', icon: 'none' })
+    return false
+  }
+  return true
+}
+
+async function handleCreate() {
+  if (submitting.value) {
+    uni.showToast({ title: '任务提交中，请勿重复点击', icon: 'none' })
+    return
+  }
+  if (!requireLogin() || !validateBeforeSubmit()) {
+    return
+  }
+  submitting.value = true
+  const activeStyle = displayStyles.value.find((item) => item.code === styleCode.value)
+  try {
+    const res = await submitApplication({
+      clientRequestId: buildClientRequestId(),
+      appId: remoteApp.value?.appId,
+      appCode: 'image_create',
+      modeCode: createMode.value,
+      modelId: activeModel.value.modelId,
+      versionId: activeVersion.value.versionId,
+      promptText: promptText.value,
+      styleCode: styleCode.value,
+      styleId: activeStyle?.styleId,
+      ratioCode: ratioValue.value,
+      sizeCode: sizeValue.value,
+      inputParams: {
+        modelCode: activeModel.value.code,
+        versionCode: activeVersion.value.code,
+        createMode: createMode.value,
+        styleCode: styleCode.value,
+        ratioCode: ratioValue.value,
+        sizeCode: sizeValue.value
+      }
+    })
+    uni.showToast({ title: '任务已提交', icon: 'none' })
+    setTimeout(() => {
+      uni.navigateTo({ url: `/pages/task/detail?taskId=${res.taskId}` })
+    }, 350)
+  } catch (error) {
+    uni.showToast({ title: error.message || '提交失败', icon: 'none' })
+  } finally {
+    submitting.value = false
+  }
 }
 
 onLoad((options) => {
-  if (models.some((item) => item.code === options.model)) {
+  if (fallbackModels.some((item) => item.code === options.model)) {
     selectModel(options.model)
   }
+  loadDetail(options.model)
 })
 </script>
 

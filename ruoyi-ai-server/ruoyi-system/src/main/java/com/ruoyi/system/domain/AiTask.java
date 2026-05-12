@@ -25,6 +25,16 @@ public class AiTask extends BaseEntity
 
     private Long modelVersionId;
 
+    private Long appId;
+
+    private Long modeId;
+
+    private Long styleId;
+
+    private String sizeCode;
+
+    private String inputParams;
+
     private Long channelId;
 
     private Long channelModelRelationId;
@@ -127,6 +137,56 @@ public class AiTask extends BaseEntity
     public void setModelVersionId(Long modelVersionId)
     {
         this.modelVersionId = modelVersionId;
+    }
+
+    public Long getAppId()
+    {
+        return appId;
+    }
+
+    public void setAppId(Long appId)
+    {
+        this.appId = appId;
+    }
+
+    public Long getModeId()
+    {
+        return modeId;
+    }
+
+    public void setModeId(Long modeId)
+    {
+        this.modeId = modeId;
+    }
+
+    public Long getStyleId()
+    {
+        return styleId;
+    }
+
+    public void setStyleId(Long styleId)
+    {
+        this.styleId = styleId;
+    }
+
+    public String getSizeCode()
+    {
+        return sizeCode;
+    }
+
+    public void setSizeCode(String sizeCode)
+    {
+        this.sizeCode = sizeCode;
+    }
+
+    public String getInputParams()
+    {
+        return inputParams;
+    }
+
+    public void setInputParams(String inputParams)
+    {
+        this.inputParams = inputParams;
     }
 
     public Long getChannelId()
@@ -398,6 +458,11 @@ public class AiTask extends BaseEntity
             .append("userId", getUserId())
             .append("modelId", getModelId())
             .append("modelVersionId", getModelVersionId())
+            .append("appId", getAppId())
+            .append("modeId", getModeId())
+            .append("styleId", getStyleId())
+            .append("sizeCode", getSizeCode())
+            .append("inputParams", getInputParams())
             .append("taskType", getTaskType())
             .append("createMode", getCreateMode())
             .append("promptText", getPromptText())

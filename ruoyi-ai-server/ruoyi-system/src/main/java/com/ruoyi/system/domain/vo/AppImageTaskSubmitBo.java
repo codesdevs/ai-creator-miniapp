@@ -15,6 +15,16 @@ public class AppImageTaskSubmitBo
 
     private String clientRequestId;
 
+    private Long appId;
+
+    private Long modeId;
+
+    private Long styleId;
+
+    private String sizeCode;
+
+    private String inputParams;
+
     @NotNull(message = "模型ID不能为空")
     private Long modelId;
 
@@ -54,6 +64,56 @@ public class AppImageTaskSubmitBo
     public void setClientRequestId(String clientRequestId)
     {
         this.clientRequestId = clientRequestId;
+    }
+
+    public Long getAppId()
+    {
+        return appId;
+    }
+
+    public void setAppId(Long appId)
+    {
+        this.appId = appId;
+    }
+
+    public Long getModeId()
+    {
+        return modeId;
+    }
+
+    public void setModeId(Long modeId)
+    {
+        this.modeId = modeId;
+    }
+
+    public Long getStyleId()
+    {
+        return styleId;
+    }
+
+    public void setStyleId(Long styleId)
+    {
+        this.styleId = styleId;
+    }
+
+    public String getSizeCode()
+    {
+        return sizeCode;
+    }
+
+    public void setSizeCode(String sizeCode)
+    {
+        this.sizeCode = sizeCode;
+    }
+
+    public String getInputParams()
+    {
+        return inputParams;
+    }
+
+    public void setInputParams(String inputParams)
+    {
+        this.inputParams = inputParams;
     }
 
     public Long getModelId()

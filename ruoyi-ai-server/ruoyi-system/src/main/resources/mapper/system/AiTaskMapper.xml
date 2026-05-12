@@ -10,6 +10,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="userId" column="user_id"/>
         <result property="modelId" column="model_id"/>
         <result property="modelVersionId" column="model_version_id"/>
+        <result property="appId" column="app_id"/>
+        <result property="modeId" column="mode_id"/>
+        <result property="styleId" column="style_id"/>
+        <result property="sizeCode" column="size_code"/>
+        <result property="inputParams" column="input_params"/>
         <result property="channelId" column="channel_id"/>
         <result property="channelModelRelationId" column="channel_model_relation_id"/>
         <result property="taskType" column="task_type"/>
@@ -41,7 +46,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectAiTaskVo">
-        select t.task_id, t.task_no, t.user_id, t.model_id, t.model_version_id, t.channel_id, t.channel_model_relation_id,
+        select t.task_id, t.task_no, t.user_id, t.model_id, t.model_version_id, t.app_id, t.mode_id, t.style_id,
+               t.size_code, cast(t.input_params as char) as input_params, t.channel_id, t.channel_model_relation_id,
                t.task_type, t.create_mode,
                cast(t.prompt_text as char) as prompt_text, cast(t.negative_prompt as char) as negative_prompt,
                t.style_code, t.ratio_code, t.source_url, t.status, t.power_cost, t.third_task_id, t.remote_model_name,
@@ -98,6 +104,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null">user_id,</if>
             <if test="modelId != null">model_id,</if>
             <if test="modelVersionId != null">model_version_id,</if>
+            <if test="appId != null">app_id,</if>
+            <if test="modeId != null">mode_id,</if>
+            <if test="styleId != null">style_id,</if>
+            <if test="sizeCode != null and sizeCode != ''">size_code,</if>
+            <if test="inputParams != null and inputParams != ''">input_params,</if>
             <if test="channelId != null">channel_id,</if>
             <if test="channelModelRelationId != null">channel_model_relation_id,</if>
             <if test="taskType != null and taskType != ''">task_type,</if>
@@ -125,6 +136,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null">#{userId},</if>
             <if test="modelId != null">#{modelId},</if>
             <if test="modelVersionId != null">#{modelVersionId},</if>
+            <if test="appId != null">#{appId},</if>
+            <if test="modeId != null">#{modeId},</if>
+            <if test="styleId != null">#{styleId},</if>
+            <if test="sizeCode != null and sizeCode != ''">#{sizeCode},</if>
+            <if test="inputParams != null and inputParams != ''">#{inputParams},</if>
             <if test="channelId != null">#{channelId},</if>
             <if test="channelModelRelationId != null">#{channelModelRelationId},</if>
             <if test="taskType != null and taskType != ''">#{taskType},</if>

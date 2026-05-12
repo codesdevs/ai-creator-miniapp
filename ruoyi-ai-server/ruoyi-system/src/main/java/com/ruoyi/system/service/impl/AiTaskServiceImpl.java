@@ -36,6 +36,8 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -52,6 +54,8 @@ import org.springframework.util.DigestUtils;
 @Service
 public class AiTaskServiceImpl implements IAiTaskService
 {
+    private static final Logger log = LoggerFactory.getLogger(AiTaskServiceImpl.class);
+
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
     private static final long MOCK_RUNNING_THRESHOLD_MS = 3_000L;
@@ -154,10 +158,12 @@ public class AiTaskServiceImpl implements IAiTaskService
         AiTask existingTask = getExistingIdempotentTask(idempotentKey);
         if (existingTask != null)
         {
+            log.info("AI image task idempotent hit, userId={}, taskId={}, taskNo={}", userId, existingTask.getTaskId(), existingTask.getTaskNo());
             return existingTask;
         }
         if (!redisCache.setCacheObjectIfAbsent(idempotentKey, IMAGE_SUBMIT_IDEMPOTENT_PENDING, IMAGE_SUBMIT_IDEMPOTENT_TTL_SECONDS, TimeUnit.SECONDS))
         {
+            log.warn("AI image task submit rejected as duplicate in-flight request, userId={}, requestKey={}", userId, idempotentKey);
             throw new ServiceException("任务提交中，请勿重复提交");
         }
         AiModel model = aiModelService.selectAiModelById(bo.getModelId());
@@ -177,6 +183,8 @@ public class AiTaskServiceImpl implements IAiTaskService
                 throw new ServiceException("模型和版本不匹配");
             }
             AiChannelModelRelation route = resolveChannelModelRelation(version.getVersionId());
+            log.info("AI image task submit accepted, userId={}, modelId={}, versionId={}, routeRelationId={}",
+                userId, model.getModelId(), version.getVersionId(), route == null ? null : route.getRelationId());
 
             AiTask task = new AiTask();
             task.setTaskNo("T" + DateUtils.dateTimeNow() + IdUtils.fastSimpleUUID().substring(0, 8).toUpperCase());
@@ -208,6 +216,8 @@ public class AiTaskServiceImpl implements IAiTaskService
             aiTaskMapper.insertAiTask(task);
             aiWalletService.consumePower(userId, version.getPowerCost(), "TASK_SUBMIT", task.getTaskId(), "提交图片生成任务扣减算力");
             redisCache.setCacheObject(idempotentKey, String.valueOf(task.getTaskId()), IMAGE_SUBMIT_IDEMPOTENT_TTL_SECONDS, TimeUnit.SECONDS);
+            log.info("AI image task persisted, taskId={}, taskNo={}, status={}, channelId={}, relationId={}",
+                task.getTaskId(), task.getTaskNo(), task.getStatus(), task.getChannelId(), task.getChannelModelRelationId());
             if (route != null)
             {
                 dispatchRealImageTask(task.getTaskId(), model.getModelId(), version.getVersionId(), route.getRelationId());
@@ -217,6 +227,7 @@ public class AiTaskServiceImpl implements IAiTaskService
         catch (Exception ex)
         {
             redisCache.deleteObject(idempotentKey);
+            log.error("AI image task submit failed, userId={}, modelId={}, versionId={}", userId, bo.getModelId(), bo.getVersionId(), ex);
             throw ex;
         }
     }
@@ -274,11 +285,15 @@ public class AiTaskServiceImpl implements IAiTaskService
                 @Override
                 public void afterCommit()
                 {
+                    log.info("AI image task dispatch after commit, taskId={}, modelId={}, versionId={}, relationId={}",
+                        taskId, modelId, versionId, relationId);
                     taskRunner.run();
                 }
             });
             return;
         }
+        log.info("AI image task dispatch immediately, taskId={}, modelId={}, versionId={}, relationId={}",
+            taskId, modelId, versionId, relationId);
         taskRunner.run();
     }
 
@@ -299,12 +314,17 @@ public class AiTaskServiceImpl implements IAiTaskService
         AiChannelModelRelation route = aiChannelModelRelationService.selectAiChannelModelRelationById(relationId);
         if (task == null || model == null || version == null || route == null)
         {
+            log.warn("AI image task async startup skipped due to missing context, taskId={}, modelId={}, versionId={}, relationId={}, taskFound={}, modelFound={}, versionFound={}, routeFound={}",
+                taskId, modelId, versionId, relationId, task != null, model != null, version != null, route != null);
             return;
         }
         if ("SUCCESS".equals(task.getStatus()) || "FAIL".equals(task.getStatus()))
         {
+            log.info("AI image task async startup skipped due to terminal status, taskId={}, status={}", taskId, task.getStatus());
             return;
         }
+        log.info("AI image task async execution started, taskId={}, taskNo={}, providerRoute={}, remoteModel={}",
+            task.getTaskId(), task.getTaskNo(), route.getRelationId(), route.getRemoteModelName());
         task.setStatus("RUNNING");
         task.setRemark("模型正在生成结果，请稍候查看");
         aiTaskMapper.updateAiTask(task);
@@ -355,6 +375,7 @@ public class AiTaskServiceImpl implements IAiTaskService
         {
             aiWalletService.grantPower(task.getUserId(), task.getPowerCost(), "TASK_REFUND", task.getTaskId(), "任务执行失败退回算力");
         }
+        log.error("AI image task execution failed, taskId={}, taskNo={}, reason={}", task.getTaskId(), task.getTaskNo(), message, ex);
     }
 
     private void executeZhipuImageTask(AiTask task, AiModelVersion version, AiChannelModelRelation route, AiProviderChannel channel)
@@ -369,6 +390,8 @@ public class AiTaskServiceImpl implements IAiTaskService
         }
         String baseUrl = StringUtils.defaultIfBlank(channel.getBaseUrl(), "https://open.bigmodel.cn");
         String requestUrl = buildZhipuRequestUrl(baseUrl);
+        log.info("AI image task invoking Zhipu, taskId={}, taskNo={}, channelId={}, remoteModel={}, requestUrl={}",
+            task.getTaskId(), task.getTaskNo(), channel.getChannelId(), route.getRemoteModelName(), requestUrl);
 
         JSONObject body = new JSONObject();
         body.put("model", StringUtils.defaultIfBlank(route.getRemoteModelName(), StringUtils.defaultIfBlank(version.getApiModelName(), "glm-image")));
@@ -393,6 +416,7 @@ public class AiTaskServiceImpl implements IAiTaskService
             responseText = response.body();
             if (response.statusCode() < 200 || response.statusCode() >= 300)
             {
+                log.warn("AI image task Zhipu returned non-2xx, taskId={}, statusCode={}", task.getTaskId(), response.statusCode());
                 throw new ServiceException("智谱接口调用失败：" + extractZhipuErrorMessage(responseText, response.statusCode()));
             }
         }
@@ -437,6 +461,8 @@ public class AiTaskServiceImpl implements IAiTaskService
         task.setFinishTime(new Date());
         task.setRemark("智谱图像生成完成");
         aiTaskMapper.updateAiTask(task);
+        log.info("AI image task execution succeeded, taskId={}, taskNo={}, resultUrl={}, thirdTaskId={}",
+            task.getTaskId(), task.getTaskNo(), imageUrl, task.getThirdTaskId());
     }
 
     private String buildRequestPayload(String requestUrl, JSONObject body, AiTask task, AiChannelModelRelation route, AiProviderChannel channel)

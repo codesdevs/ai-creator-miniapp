@@ -44,9 +44,11 @@ public class AiTaskController extends BaseController
     @GetMapping("/{taskId}")
     public AjaxResult getInfo(@PathVariable Long taskId)
     {
+        AiTask task = aiTaskService.selectAiTaskById(taskId);
         AjaxResult result = AjaxResult.success();
-        result.put("task", aiTaskService.selectAiTaskById(taskId));
+        result.put("task", task);
         result.put("resultList", aiTaskService.selectAiTaskResultListByTaskId(taskId));
+        result.put("refunded", "FAIL".equals(task.getStatus()) && aiTaskService.hasTaskRefunded(taskId));
         return result;
     }
 

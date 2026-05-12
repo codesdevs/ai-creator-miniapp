@@ -37,6 +37,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="versionName" column="version_name"/>
         <result property="providerName" column="provider_name"/>
         <result property="channelName" column="channel_name"/>
+        <result property="nickName" column="nick_name"/>
     </resultMap>
 
     <sql id="selectAiTaskVo">
@@ -46,12 +47,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                t.style_code, t.ratio_code, t.source_url, t.status, t.power_cost, t.third_task_id, t.remote_model_name,
                t.fail_reason, cast(t.request_payload as char) as request_payload, cast(t.response_payload as char) as response_payload,
                t.submit_time, t.finish_time, t.create_by, t.create_time, t.update_by, t.update_time,
-               t.remark, m.model_name, v.version_name, p.provider_name, c.channel_name
+               t.remark, m.model_name, v.version_name, p.provider_name, c.channel_name, u.nick_name
         from ai_c_task t
         left join ai_c_model m on m.model_id = t.model_id
         left join ai_c_model_version v on v.version_id = t.model_version_id
         left join ai_c_provider_channel c on c.channel_id = t.channel_id
         left join ai_c_provider p on p.provider_id = c.provider_id
+        left join ai_c_user u on u.user_id = t.user_id
     </sql>
 
     <select id="selectAiTaskById" parameterType="Long" resultMap="AiTaskResult">
@@ -66,9 +68,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null">and t.user_id = #{userId}</if>
             <if test="modelId != null">and t.model_id = #{modelId}</if>
             <if test="modelVersionId != null">and t.model_version_id = #{modelVersionId}</if>
+            <if test="providerName != null and providerName != ''">and p.provider_name like concat('%', #{providerName}, '%')</if>
+            <if test="channelName != null and channelName != ''">and c.channel_name like concat('%', #{channelName}, '%')</if>
+            <if test="remoteModelName != null and remoteModelName != ''">and t.remote_model_name like concat('%', #{remoteModelName}, '%')</if>
             <if test="taskType != null and taskType != ''">and t.task_type = #{taskType}</if>
             <if test="createMode != null and createMode != ''">and t.create_mode = #{createMode}</if>
             <if test="status != null and status != ''">and t.status = #{status}</if>
+            <if test="processingOnly == '1'">and t.status in ('PENDING', 'WAITING', 'RUNNING')</if>
+            <if test="requestRecorded != null and requestRecorded != ''">
+                <choose>
+                    <when test="requestRecorded == '1'">and t.request_payload is not null and t.request_payload != ''</when>
+                    <when test="requestRecorded == '0'">and (t.request_payload is null or t.request_payload = '')</when>
+                </choose>
+            </if>
+            <if test="responseRecorded != null and responseRecorded != ''">
+                <choose>
+                    <when test="responseRecorded == '1'">and t.response_payload is not null and t.response_payload != ''</when>
+                    <when test="responseRecorded == '0'">and (t.response_payload is null or t.response_payload = '')</when>
+                </choose>
+            </if>
         </where>
         order by t.task_id desc
     </select>

@@ -71,6 +71,14 @@ public class AiTask extends BaseEntity
 
     private String channelName;
 
+    private String nickName;
+
+    private String requestRecorded;
+
+    private String responseRecorded;
+
+    private String processingOnly;
+
     public Long getTaskId()
     {
         return taskId;
@@ -341,6 +349,46 @@ public class AiTask extends BaseEntity
         this.channelName = channelName;
     }
 
+    public String getNickName()
+    {
+        return nickName;
+    }
+
+    public void setNickName(String nickName)
+    {
+        this.nickName = nickName;
+    }
+
+    public String getRequestRecorded()
+    {
+        return requestRecorded;
+    }
+
+    public void setRequestRecorded(String requestRecorded)
+    {
+        this.requestRecorded = requestRecorded;
+    }
+
+    public String getResponseRecorded()
+    {
+        return responseRecorded;
+    }
+
+    public void setResponseRecorded(String responseRecorded)
+    {
+        this.responseRecorded = responseRecorded;
+    }
+
+    public String getProcessingOnly()
+    {
+        return processingOnly;
+    }
+
+    public void setProcessingOnly(String processingOnly)
+    {
+        this.processingOnly = processingOnly;
+    }
+
     @Override
     public String toString()
     {
@@ -363,6 +411,12 @@ public class AiTask extends BaseEntity
             .append("failReason", getFailReason())
             .append("requestPayload", getRequestPayload())
             .append("responsePayload", getResponsePayload())
+            .append("providerName", getProviderName())
+            .append("channelName", getChannelName())
+            .append("nickName", getNickName())
+            .append("requestRecorded", getRequestRecorded())
+            .append("responseRecorded", getResponseRecorded())
+            .append("processingOnly", getProcessingOnly())
             .append("submitTime", getSubmitTime())
             .append("finishTime", getFinishTime())
             .append("createTime", getCreateTime())

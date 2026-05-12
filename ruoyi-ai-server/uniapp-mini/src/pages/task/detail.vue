@@ -85,16 +85,20 @@
             mode="aspectFill"
             @tap="previewResult(item)"
           />
+          <text v-if="item.resultText" class="result-text">{{ item.resultText }}</text>
           <view class="result-meta">
             <text class="result-type">{{ item.resultType || 'IMAGE' }}</text>
             <text class="result-size">
-              {{ item.width && item.height ? `${item.width} x ${item.height}` : '尺寸未知' }}
+              {{ item.resultType === 'TEXT' ? '文本结果' : (item.width && item.height ? `${item.width} x ${item.height}` : '尺寸未知') }}
             </text>
           </view>
-          <text class="result-url">{{ item.fileUrl || '-' }}</text>
-          <view class="result-actions">
+          <text v-if="item.fileUrl" class="result-url">{{ item.fileUrl }}</text>
+          <view v-if="item.coverUrl || item.fileUrl" class="result-actions">
             <text class="result-link" @tap="previewResult(item)">预览大图</text>
             <text class="result-link" @tap="saveResult(item)">保存图片</text>
+            <text class="result-link primary" @tap="createAgain">再次创作</text>
+          </view>
+          <view v-else class="result-actions">
             <text class="result-link primary" @tap="createAgain">再次创作</text>
           </view>
         </view>
@@ -190,7 +194,8 @@ function statusClass(status) {
 function formatMode(mode) {
   const map = {
     TEXT_TO_IMAGE: '文生图',
-    IMAGE_TO_IMAGE: '图生图'
+    IMAGE_TO_IMAGE: '图生图',
+    TEXT_TO_TEXT: '文本创作'
   }
   return map[mode] || mode || '-'
 }
@@ -242,6 +247,12 @@ function reload() {
 
 function createAgain() {
   if (!task.value?.modelId) {
+    return
+  }
+  if (task.value.taskType === 'TEXT') {
+    uni.navigateTo({
+      url: '/pages/create/text'
+    })
     return
   }
   uni.navigateTo({
@@ -579,6 +590,15 @@ onUnload(() => {
   font-size: 22rpx;
   line-height: 1.6;
   word-break: break-all;
+}
+
+.result-text {
+  display: block;
+  padding: 24rpx;
+  color: #eef1ff;
+  font-size: 26rpx;
+  line-height: 1.75;
+  white-space: pre-wrap;
 }
 
 .result-actions {

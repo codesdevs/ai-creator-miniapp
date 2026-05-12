@@ -23,6 +23,8 @@ public class AiTaskResult extends BaseEntity
 
     private String coverUrl;
 
+    private String resultText;
+
     private Integer width;
 
     private Integer height;
@@ -81,6 +83,16 @@ public class AiTaskResult extends BaseEntity
         this.coverUrl = coverUrl;
     }
 
+    public String getResultText()
+    {
+        return resultText;
+    }
+
+    public void setResultText(String resultText)
+    {
+        this.resultText = resultText;
+    }
+
     public Integer getWidth()
     {
         return width;
@@ -130,6 +142,7 @@ public class AiTaskResult extends BaseEntity
             .append("resultType", getResultType())
             .append("fileUrl", getFileUrl())
             .append("coverUrl", getCoverUrl())
+            .append("resultText", getResultText())
             .append("width", getWidth())
             .append("height", getHeight())
             .append("duration", getDuration())

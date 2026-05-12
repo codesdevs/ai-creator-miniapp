@@ -10,6 +10,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="resultType" column="result_type"/>
         <result property="fileUrl" column="file_url"/>
         <result property="coverUrl" column="cover_url"/>
+        <result property="resultText" column="result_text"/>
         <result property="width" column="width"/>
         <result property="height" column="height"/>
         <result property="duration" column="duration"/>
@@ -18,7 +19,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <select id="selectAiTaskResultListByTaskId" parameterType="Long" resultMap="AiTaskResultMap">
-        select result_id, task_id, result_type, file_url, cover_url, width, height, duration, seq_no, create_time
+        select result_id, task_id, result_type, file_url, cover_url, cast(result_text as char) as result_text,
+               width, height, duration, seq_no, create_time
         from ai_c_task_result
         where task_id = #{taskId}
         order by seq_no asc, result_id asc
@@ -26,8 +28,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <insert id="insertAiTaskResult" parameterType="AiTaskResult" useGeneratedKeys="true" keyProperty="resultId">
         insert into ai_c_task_result
-        (task_id, result_type, file_url, cover_url, width, height, duration, seq_no, create_time)
+        (task_id, result_type, file_url, cover_url, result_text, width, height, duration, seq_no, create_time)
         values
-        (#{taskId}, #{resultType}, #{fileUrl}, #{coverUrl}, #{width}, #{height}, #{duration}, #{seqNo}, sysdate())
+        (#{taskId}, #{resultType}, #{fileUrl}, #{coverUrl}, #{resultText}, #{width}, #{height}, #{duration}, #{seqNo}, sysdate())
     </insert>
 </mapper>

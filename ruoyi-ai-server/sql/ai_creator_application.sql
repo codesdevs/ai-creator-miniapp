@@ -197,6 +197,12 @@ set @sql = (
 );
 prepare stmt from @sql; execute stmt; deallocate prepare stmt;
 
+set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_task_result add column result_text longtext comment ''文本结果'' after cover_url', 'select 1')
+    from information_schema.columns where table_schema = database() and table_name = 'ai_c_task_result' and column_name = 'result_text'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
 insert into ai_c_app_category (category_id, category_code, category_name, sort, status)
 values
     (1, 'TEXT_CREATE', '文本创作', 1, '0'),
@@ -262,10 +268,23 @@ on duplicate key update mode_name = values(mode_name), mode_type = values(mode_t
 
 insert into ai_c_app_model_relation (app_id, model_id, default_version_id, display_name, intro, sort, status)
 values
+    (1, 30, 30, '通用文案模型', '文本创作默认模型', 1, '0'),
     (20, 1, 1, '即梦AI', '字节跳动图片模型', 1, '0'),
     (20, 2, 3, '通义万象', '阿里通义AI大模型', 2, '0'),
     (20, 3, 4, '可灵AI', '快手AI大模型', 3, '0')
 on duplicate key update default_version_id = values(default_version_id), display_name = values(display_name), intro = values(intro), sort = values(sort), status = values(status);
+
+insert into ai_c_model
+    (model_id, model_code, model_name, model_type, provider, official_provider_id, capabilities, intro, status, sort, create_by)
+values
+    (30, 'copy-text', '通用文案模型', 'TEXT', 'ZHIPU', 6, '["text_to_text"]', '文案创作默认文本模型', '0', 30, 'admin')
+on duplicate key update model_name = values(model_name), model_type = values(model_type), provider = values(provider), official_provider_id = values(official_provider_id), capabilities = values(capabilities), intro = values(intro), status = values(status), sort = values(sort);
+
+insert into ai_c_model_version
+    (version_id, model_id, version_code, version_name, power_cost, support_mode, status, create_by)
+values
+    (30, 30, 'copy-text-v1', '文案创作 V1', 2, 'TEXT_TO_TEXT', '0', 'admin')
+on duplicate key update version_name = values(version_name), power_cost = values(power_cost), support_mode = values(support_mode), status = values(status);
 
 update ai_c_model_version
 set version_intro = case version_code

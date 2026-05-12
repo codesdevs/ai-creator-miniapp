@@ -72,7 +72,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getApplicationDetail } from '@/api/application'
+import { getApplicationDetail, submitApplication } from '@/api/application'
+import { requireLogin } from '@/utils/auth'
 
 const balancePower = ref(0)
 const contentText = ref('')
@@ -80,6 +81,7 @@ const activeCode = ref('copy_create')
 const lengthValue = ref('short')
 const remoteApp = ref(null)
 const remoteModes = ref([])
+const submitting = ref(false)
 
 const fallbackModes = [
   { code: 'copy_create', name: '文案创作', placeholder: '请输入文案创作的提示词和创作要求', powerCost: 2 },
@@ -132,7 +134,46 @@ function goWorks() {
 }
 
 function handleCreate() {
-  uni.showToast({ title: '原型页：后续接入统一应用提交接口', icon: 'none' })
+  submitText()
+}
+
+function buildClientRequestId() {
+  return `app-text-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+async function submitText() {
+  if (submitting.value) {
+    uni.showToast({ title: '任务提交中，请勿重复点击', icon: 'none' })
+    return
+  }
+  if (!contentText.value.trim()) {
+    uni.showToast({ title: '请输入创作内容', icon: 'none' })
+    return
+  }
+  if (!requireLogin()) {
+    return
+  }
+  submitting.value = true
+  try {
+    const res = await submitApplication({
+      clientRequestId: buildClientRequestId(),
+      appId: remoteApp.value?.appId,
+      appCode: 'copywriting',
+      modeCode: activeMode.value.code,
+      promptText: contentText.value,
+      inputParams: {
+        length: lengthValue.value
+      }
+    })
+    uni.showToast({ title: '任务已完成', icon: 'none' })
+    setTimeout(() => {
+      uni.navigateTo({ url: `/pages/task/detail?taskId=${res.taskId}` })
+    }, 350)
+  } catch (error) {
+    uni.showToast({ title: error.message || '提交失败', icon: 'none' })
+  } finally {
+    submitting.value = false
+  }
 }
 
 onLoad((options) => {

@@ -64,4 +64,15 @@ public class AppAuthController
         Long userId = AppSecurityUtils.getUserId();
         return AjaxResult.success(aiAppUserService.selectAiAppUserById(userId));
     }
+
+    @PostMapping("/logout")
+    public AjaxResult logout()
+    {
+        AppLoginUser loginUser = AppSecurityUtils.getLoginUser();
+        if (loginUser != null)
+        {
+            appTokenService.delLoginUser(loginUser.getToken());
+        }
+        return AjaxResult.success("退出成功");
+    }
 }

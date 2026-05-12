@@ -22,5 +22,7 @@ public interface IAiOrderService
 
     public AiOrder cancelUserOrder(Long userId, Long orderId);
 
+    public AiOrder mockPayUserOrder(Long userId, Long orderId);
+
     public AiOrder adminHandleOrder(AdminOrderHandleBo bo);
 }

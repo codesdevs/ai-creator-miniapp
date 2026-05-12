@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@/config'
-import { clearAuth, getToken } from '@/utils/auth'
+import { clearAuth, getToken, navigateToLogin } from '@/utils/auth'
 
 export function request({ url, method = 'GET', data = {}, header = {} }) {
   return new Promise((resolve, reject) => {
@@ -18,9 +18,7 @@ export function request({ url, method = 'GET', data = {}, header = {} }) {
         if (statusCode >= 200 && statusCode < 300) {
           if (response && response.code === 401) {
             clearAuth()
-            uni.navigateTo({
-              url: '/pages/login/index'
-            })
+            navigateToLogin()
             reject(new Error(response.msg || '登录已过期'))
             return
           }

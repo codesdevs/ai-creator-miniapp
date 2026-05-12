@@ -67,8 +67,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getProfile } from '@/api/auth'
-import { clearAuth, getUser, isLoggedIn, setUser } from '@/utils/auth'
+import { getProfile, logout as logoutApi } from '@/api/auth'
+import { clearAuth, getUser, isLoggedIn, navigateToLogin, setUser } from '@/utils/auth'
 
 const user = ref(null)
 
@@ -98,7 +98,7 @@ async function loadProfile() {
 }
 
 function goLogin() {
-  uni.navigateTo({ url: '/pages/login/index' })
+  navigateToLogin('/pages/mine/index')
 }
 
 function goAssets() {
@@ -122,9 +122,23 @@ function goAppCenter() {
 }
 
 function logout() {
-  clearAuth()
-  user.value = null
-  uni.showToast({ title: '已退出登录', icon: 'none' })
+  uni.showModal({
+    title: '退出登录',
+    content: '确认退出当前账号吗？',
+    success: async ({ confirm }) => {
+      if (!confirm) {
+        return
+      }
+      try {
+        await logoutApi()
+      } catch (error) {
+        // Ignore backend logout failure and continue clearing local state.
+      }
+      clearAuth()
+      user.value = null
+      uni.showToast({ title: '已退出登录', icon: 'none' })
+    }
+  })
 }
 
 onLoad(loadProfile)

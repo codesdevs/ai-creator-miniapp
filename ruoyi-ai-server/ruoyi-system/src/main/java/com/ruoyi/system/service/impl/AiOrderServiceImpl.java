@@ -151,6 +151,24 @@ public class AiOrderServiceImpl implements IAiOrderService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public AiOrder mockPayUserOrder(Long userId, Long orderId)
+    {
+        AiOrder order = selectUserOrderById(userId, orderId);
+        if (!StringUtils.equals("WAIT_PAY", order.getOrderStatus()))
+        {
+            throw new ServiceException("当前订单状态不允许支付");
+        }
+        AiPayConfig payConfig = aiPayConfigService.selectAiPayConfigById(order.getPayConfigId());
+        if (!isMockPayEnabled(payConfig))
+        {
+            throw new ServiceException("当前支付渠道未开启开发态支付");
+        }
+        markOrderPaid(order, "DEV-MOCK-" + order.getOrderNo(), "开发态模拟支付成功");
+        return aiOrderMapper.selectAiOrderById(order.getOrderId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public AiOrder adminHandleOrder(AdminOrderHandleBo bo)
     {
         AiOrder order = aiOrderMapper.selectAiOrderById(bo.getOrderId());
@@ -164,14 +182,34 @@ public class AiOrderServiceImpl implements IAiOrderService
         order.setRemark(bo.getRemark());
         if ("PAID".equals(bo.getOrderStatus()) && !"PAID".equals(beforeStatus))
         {
-            order.setPayTime(DateUtils.getNowDate());
-            aiWalletService.rechargePower(order.getUserId(),
-                (order.getPowerNum() == null ? 0 : order.getPowerNum()) + (order.getBonusPowerNum() == null ? 0 : order.getBonusPowerNum()),
-                "ORDER_RECHARGE", order.getOrderId(), "充值订单到账：" + order.getOrderNo());
+            markOrderPaid(order, bo.getThirdOrderNo(), StringUtils.defaultIfBlank(bo.getRemark(), "充值订单到账"));
+            return aiOrderMapper.selectAiOrderById(order.getOrderId());
         }
         order.setUpdateTime(DateUtils.getNowDate());
         aiOrderMapper.updateAiOrder(order);
         return aiOrderMapper.selectAiOrderById(order.getOrderId());
+    }
+
+    private void markOrderPaid(AiOrder order, String thirdOrderNo, String remark)
+    {
+        order.setOrderStatus("PAID");
+        order.setThirdOrderNo(thirdOrderNo);
+        order.setPayTime(DateUtils.getNowDate());
+        order.setRemark(remark);
+        order.setUpdateTime(DateUtils.getNowDate());
+        aiWalletService.rechargePower(order.getUserId(),
+            (order.getPowerNum() == null ? 0 : order.getPowerNum()) + (order.getBonusPowerNum() == null ? 0 : order.getBonusPowerNum()),
+            "ORDER_RECHARGE", order.getOrderId(), "充值订单到账：" + order.getOrderNo());
+        aiOrderMapper.updateAiOrder(order);
+    }
+
+    private boolean isMockPayEnabled(AiPayConfig payConfig)
+    {
+        if (payConfig == null || !StringUtils.equals("0", payConfig.getStatus()))
+        {
+            return false;
+        }
+        return StringUtils.isAllBlank(payConfig.getMchId(), payConfig.getAppId(), payConfig.getNotifyUrl());
     }
 
     private String buildOrderNo()

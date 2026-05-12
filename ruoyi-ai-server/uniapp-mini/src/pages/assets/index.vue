@@ -34,7 +34,7 @@
       <view class="action-head">
         <view>
           <text class="action-title">充值套餐</text>
-          <text class="action-desc">当前下单后需在后台手动处理为已支付，用于联调充值到账链路。</text>
+          <text class="action-desc">开发态支持在小程序内直接完成模拟支付，用于联调充值到账链路。</text>
         </view>
         <text class="action-badge">DEV</text>
       </view>
@@ -129,6 +129,7 @@
           </view>
           <view class="order-actions">
             <text class="order-link">查看详情</text>
+            <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link primary" @tap.stop="handleMockPay(item.orderId)">立即支付</text>
             <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link warn" @tap.stop="showPayGuide(item.orderId)">支付指引</text>
             <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link danger" @tap.stop="handleCancelOrder(item.orderId)">取消订单</text>
           </view>
@@ -226,6 +227,7 @@
           </view>
         </view>
         <view v-if="orderDetail.orderStatus === 'WAIT_PAY'" class="popup-actions">
+          <button class="popup-btn primary" @tap="handleMockPay(orderDetail.orderId)">立即支付</button>
           <button class="popup-btn secondary" @tap="showPayGuide(orderDetail.orderId)">支付指引</button>
           <button class="popup-btn danger" @tap="handleCancelOrder(orderDetail.orderId)">取消订单</button>
         </view>
@@ -238,7 +240,7 @@
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { redeemCardCode } from '@/api/cardCode'
-import { cancelRechargeOrder, getMyRechargeOrderList, getPayConfigList, getRechargeOrderDetail, getRechargePackageList, submitRechargeOrder } from '@/api/order'
+import { cancelRechargeOrder, getMyRechargeOrderList, getPayConfigList, getRechargeOrderDetail, getRechargePackageList, mockPayRechargeOrder, submitRechargeOrder } from '@/api/order'
 import { getWalletFlows, getWalletInfo } from '@/api/wallet'
 import { requireLogin } from '@/utils/auth'
 
@@ -356,7 +358,7 @@ async function showPayGuide(orderId) {
     const detail = res.data || {}
     uni.showModal({
       title: '支付指引',
-      content: `${res.payTip || '当前为开发阶段，请在后台手动处理订单。'}\n订单号：${detail.orderNo || '-'}\n金额：¥${detail.payAmount || 0}`,
+      content: `${res.payTip || '当前为开发阶段，可直接在小程序内完成模拟支付。'}\n订单号：${detail.orderNo || '-'}\n金额：¥${detail.payAmount || 0}`,
       showCancel: false
     })
   } catch (error) {
@@ -365,6 +367,34 @@ async function showPayGuide(orderId) {
       icon: 'none'
     })
   }
+}
+
+async function handleMockPay(orderId) {
+  uni.showModal({
+    title: '确认支付',
+    content: '当前为开发态模拟支付，确认后将直接给当前账号充值到账。',
+    success: async ({ confirm }) => {
+      if (!confirm) {
+        return
+      }
+      try {
+        await mockPayRechargeOrder(orderId)
+        uni.showToast({
+          title: '支付成功，算力已到账',
+          icon: 'none'
+        })
+        await Promise.all([loadData(), loadOrders()])
+        if (orderDetailOpen.value && orderDetail.value.orderId === orderId) {
+          await fetchOrderDetail(orderId)
+        }
+      } catch (error) {
+        uni.showToast({
+          title: error.message || '支付失败',
+          icon: 'none'
+        })
+      }
+    }
+  })
 }
 
 async function handleCancelOrder(orderId) {

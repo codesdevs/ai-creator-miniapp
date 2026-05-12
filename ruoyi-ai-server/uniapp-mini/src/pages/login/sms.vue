@@ -60,7 +60,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { devLogin } from '@/api/auth'
-import { setToken, setUser } from '@/utils/auth'
+import { isLoggedIn, redirectAfterLogin, setToken, setUser } from '@/utils/auth'
 
 const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
 const checked = ref(false)
@@ -116,7 +116,7 @@ async function handleLogin() {
     })
     setToken(res.token)
     setUser(res.user)
-    uni.switchTab({ url: '/pages/mine/index' })
+    redirectAfterLogin('/pages/mine/index')
   } catch (error) {
     uni.showToast({ title: error.message || '登录失败', icon: 'none' })
   } finally {
@@ -139,6 +139,10 @@ function persistInviteCode() {
 }
 
 onLoad((options) => {
+  if (isLoggedIn()) {
+    redirectAfterLogin('/pages/mine/index')
+    return
+  }
   form.value.inviteCode = options?.inviteCode || uni.getStorageSync(INVITE_CODE_KEY) || ''
 })
 </script>

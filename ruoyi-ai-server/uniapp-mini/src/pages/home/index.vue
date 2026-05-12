@@ -116,7 +116,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { listModel } from '@/api/model'
 import { getMyTaskList } from '@/api/task'
 import { getWalletInfo } from '@/api/wallet'
-import { getUser, isLoggedIn } from '@/utils/auth'
+import { getUser, isLoggedIn, navigateToLogin } from '@/utils/auth'
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -237,7 +237,7 @@ function goMine() {
 }
 
 function goLogin() {
-  uni.navigateTo({ url: '/pages/login/index' })
+  navigateToLogin('/pages/home/index')
 }
 
 function goTaskDetail(taskId) {

@@ -21,3 +21,10 @@ export function getProfile() {
     url: '/app/auth/profile'
   })
 }
+
+export function logout() {
+  return request({
+    url: '/app/auth/logout',
+    method: 'POST'
+  })
+}

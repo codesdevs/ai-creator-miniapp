@@ -50,7 +50,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { devLogin, wxLogin } from '@/api/auth'
-import { getDevVisitorKey, setToken, setUser } from '@/utils/auth'
+import { getDevVisitorKey, isLoggedIn, redirectAfterLogin, setToken, setUser } from '@/utils/auth'
 
 const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
 const checked = ref(true)
@@ -96,7 +96,7 @@ function showRegisterTip() {
 function doLoginSuccess(res) {
   setToken(res.token)
   setUser(res.user)
-  uni.switchTab({ url: '/pages/mine/index' })
+  redirectAfterLogin('/pages/mine/index')
 }
 
 function getDefaultNickname() {
@@ -173,6 +173,10 @@ function persistInviteCode() {
 }
 
 onLoad((options) => {
+  if (isLoggedIn()) {
+    redirectAfterLogin('/pages/mine/index')
+    return
+  }
   inviteCode.value = options?.inviteCode || uni.getStorageSync(INVITE_CODE_KEY) || ''
 })
 </script>

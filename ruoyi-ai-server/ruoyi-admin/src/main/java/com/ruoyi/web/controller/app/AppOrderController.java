@@ -56,7 +56,7 @@ public class AppOrderController
         AiOrder order = aiOrderService.createRechargeOrder(AppSecurityUtils.getUserId(), bo.getPackageId(), bo.getPayConfigId());
         AjaxResult result = AjaxResult.success("充值订单创建成功");
         result.put("order", order);
-        result.put("payTip", "当前为开发阶段，请在后台将订单处理为已支付以模拟到账");
+        result.put("payTip", "当前为开发阶段，可在小程序订单详情中直接完成模拟支付到账");
         return result;
     }
 
@@ -73,8 +73,17 @@ public class AppOrderController
         AjaxResult result = AjaxResult.success(order);
         if ("WAIT_PAY".equals(order.getOrderStatus()))
         {
-            result.put("payTip", "当前为开发阶段，请在后台将订单处理为已支付以模拟到账");
+            result.put("payTip", "当前为开发阶段，可在当前订单详情中直接完成模拟支付到账");
         }
+        return result;
+    }
+
+    @PostMapping("/{orderId}/mockPay")
+    public AjaxResult mockPay(@PathVariable Long orderId)
+    {
+        AiOrder order = aiOrderService.mockPayUserOrder(AppSecurityUtils.getUserId(), orderId);
+        AjaxResult result = AjaxResult.success("模拟支付成功");
+        result.put("order", order);
         return result;
     }
 

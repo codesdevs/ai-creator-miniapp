@@ -90,6 +90,15 @@ public class AppTokenService
         redisCache.setCacheObject(getTokenKey(loginUser.getToken()), loginUser, expireTime, TimeUnit.MINUTES);
     }
 
+    public void delLoginUser(String token)
+    {
+        if (StringUtils.isBlank(token))
+        {
+            return;
+        }
+        redisCache.deleteObject(getTokenKey(token));
+    }
+
     private String getToken(HttpServletRequest request)
     {
         String token = request.getHeader(header);

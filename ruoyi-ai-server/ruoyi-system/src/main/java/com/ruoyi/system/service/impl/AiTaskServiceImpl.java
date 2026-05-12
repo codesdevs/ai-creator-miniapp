@@ -33,6 +33,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +70,10 @@ public class AiTaskServiceImpl implements IAiTaskService
     private static final String IMAGE_SUBMIT_IDEMPOTENT_PENDING = "PENDING";
 
     private static final int IMAGE_SUBMIT_IDEMPOTENT_TTL_SECONDS = 120;
+
+    private static final long ZHIPU_ASYNC_POLL_INTERVAL_MS = 3000L;
+
+    private static final long ZHIPU_ASYNC_MIN_WAIT_MS = 180_000L;
 
     @Autowired
     private AiTaskMapper aiTaskMapper;
@@ -389,9 +394,11 @@ public class AiTaskServiceImpl implements IAiTaskService
             throw new ServiceException("智谱渠道未配置 API Key");
         }
         String baseUrl = StringUtils.defaultIfBlank(channel.getBaseUrl(), "https://open.bigmodel.cn");
-        String requestUrl = buildZhipuRequestUrl(baseUrl);
-        log.info("AI image task invoking Zhipu, taskId={}, taskNo={}, channelId={}, remoteModel={}, requestUrl={}",
-            task.getTaskId(), task.getTaskNo(), channel.getChannelId(), route.getRemoteModelName(), requestUrl);
+        String requestUrl = buildZhipuAsyncSubmitUrl(baseUrl);
+        int requestTimeoutMs = resolveTimeoutMs(channel);
+        long asyncWaitTimeoutMs = resolveAsyncWaitTimeoutMs(channel);
+        log.info("AI image task invoking Zhipu async submit, taskId={}, taskNo={}, channelId={}, remoteModel={}, requestUrl={}, requestTimeoutMs={}, asyncWaitTimeoutMs={}",
+            task.getTaskId(), task.getTaskNo(), channel.getChannelId(), route.getRemoteModelName(), requestUrl, requestTimeoutMs, asyncWaitTimeoutMs);
 
         JSONObject body = new JSONObject();
         body.put("model", StringUtils.defaultIfBlank(route.getRemoteModelName(), StringUtils.defaultIfBlank(version.getApiModelName(), "glm-image")));
@@ -402,22 +409,22 @@ public class AiTaskServiceImpl implements IAiTaskService
         task.setRequestPayload(buildRequestPayload(requestUrl, body, task, route, channel));
         aiTaskMapper.updateAiTask(task);
 
-        String responseText;
+        String submitResponseText;
         try
         {
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(requestUrl))
-                .timeout(Duration.ofMillis(resolveTimeoutMs(channel)))
+                .timeout(Duration.ofMillis(requestTimeoutMs))
                 .header("Authorization", "Bearer " + channel.getApiKey())
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toJSONString()))
                 .build();
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-            responseText = response.body();
+            submitResponseText = response.body();
             if (response.statusCode() < 200 || response.statusCode() >= 300)
             {
                 log.warn("AI image task Zhipu returned non-2xx, taskId={}, statusCode={}", task.getTaskId(), response.statusCode());
-                throw new ServiceException("智谱接口调用失败：" + extractZhipuErrorMessage(responseText, response.statusCode()));
+                throw new ServiceException("智谱接口调用失败：" + extractZhipuErrorMessage(submitResponseText, response.statusCode()));
             }
         }
         catch (ServiceException ex)
@@ -429,40 +436,54 @@ public class AiTaskServiceImpl implements IAiTaskService
             throw new ServiceException("智谱接口调用异常：" + ex.getMessage());
         }
 
-        JSONObject responseJson = JSON.parseObject(responseText);
-        task.setResponsePayload(responseText);
-        JSONArray dataArray = responseJson.getJSONArray("data");
-        if (dataArray == null || dataArray.isEmpty())
+        JSONObject submitResponse = JSON.parseObject(submitResponseText);
+        String asyncTaskId = StringUtils.defaultIfBlank(submitResponse.getString("id"), submitResponse.getString("task_id"));
+        String taskStatus = normalizeAsyncTaskStatus(submitResponse.getString("task_status"));
+        if (StringUtils.isBlank(asyncTaskId))
         {
-            aiTaskMapper.updateAiTask(task);
-            throw new ServiceException("智谱接口未返回图片结果");
+            throw new ServiceException("智谱异步提交未返回任务 ID");
         }
-        String imageUrl = dataArray.getJSONObject(0).getString("url");
-        if (StringUtils.isBlank(imageUrl))
+        task.setThirdTaskId(asyncTaskId);
+        task.setResponsePayload(buildAsyncResponsePayload(submitResponse, null));
+        task.setRemark("智谱任务已受理，正在异步生成");
+        aiTaskMapper.updateAiTask(task);
+        if ("FAIL".equals(taskStatus))
         {
-            aiTaskMapper.updateAiTask(task);
-            throw new ServiceException("智谱接口返回的图片地址为空");
+            throw new ServiceException("智谱异步任务提交失败：" + extractAsyncFailureMessage(submitResponse));
+        }
+
+        JSONObject finalResponse = pollZhipuAsyncResult(task, channel, baseUrl, asyncTaskId, requestTimeoutMs, asyncWaitTimeoutMs);
+        task.setResponsePayload(buildAsyncResponsePayload(submitResponse, finalResponse));
+        aiTaskMapper.updateAiTask(task);
+
+        List<String> imageUrls = extractImageUrls(finalResponse);
+        if (imageUrls.isEmpty())
+        {
+            throw new ServiceException("智谱异步结果未返回图片地址");
         }
 
         int[] size = resolveImageSize(task.getRatioCode());
-        AiTaskResult result = new AiTaskResult();
-        result.setTaskId(task.getTaskId());
-        result.setResultType("IMAGE");
-        result.setFileUrl(imageUrl);
-        result.setCoverUrl(imageUrl);
-        result.setWidth(size[0]);
-        result.setHeight(size[1]);
-        result.setSeqNo(1);
-        aiTaskResultMapper.insertAiTaskResult(result);
+        for (int i = 0; i < imageUrls.size(); i++)
+        {
+            String imageUrl = imageUrls.get(i);
+            AiTaskResult result = new AiTaskResult();
+            result.setTaskId(task.getTaskId());
+            result.setResultType("IMAGE");
+            result.setFileUrl(imageUrl);
+            result.setCoverUrl(imageUrl);
+            result.setWidth(size[0]);
+            result.setHeight(size[1]);
+            result.setSeqNo(i + 1);
+            aiTaskResultMapper.insertAiTaskResult(result);
+        }
 
         task.setStatus("SUCCESS");
-        task.setThirdTaskId(responseJson.getString("request_id"));
         task.setFailReason("");
         task.setFinishTime(new Date());
         task.setRemark("智谱图像生成完成");
         aiTaskMapper.updateAiTask(task);
-        log.info("AI image task execution succeeded, taskId={}, taskNo={}, resultUrl={}, thirdTaskId={}",
-            task.getTaskId(), task.getTaskNo(), imageUrl, task.getThirdTaskId());
+        log.info("AI image task execution succeeded, taskId={}, taskNo={}, resultCount={}, thirdTaskId={}",
+            task.getTaskId(), task.getTaskNo(), imageUrls.size(), task.getThirdTaskId());
     }
 
     private String buildRequestPayload(String requestUrl, JSONObject body, AiTask task, AiChannelModelRelation route, AiProviderChannel channel)
@@ -514,9 +535,188 @@ public class AiTaskServiceImpl implements IAiTaskService
         return JSON.toJSONString(payload);
     }
 
+    private JSONObject pollZhipuAsyncResult(AiTask task, AiProviderChannel channel, String baseUrl, String asyncTaskId, int requestTimeoutMs, long asyncWaitTimeoutMs)
+    {
+        String resultUrl = buildZhipuAsyncResultUrl(baseUrl, asyncTaskId);
+        long deadline = System.currentTimeMillis() + asyncWaitTimeoutMs;
+        while (System.currentTimeMillis() < deadline)
+        {
+            JSONObject response = queryZhipuAsyncResult(channel, resultUrl, requestTimeoutMs);
+            String taskStatus = normalizeAsyncTaskStatus(response.getString("task_status"));
+            if ("SUCCESS".equals(taskStatus))
+            {
+                log.info("AI image task async result ready, taskId={}, taskNo={}, thirdTaskId={}",
+                    task.getTaskId(), task.getTaskNo(), asyncTaskId);
+                return response;
+            }
+            if ("FAIL".equals(taskStatus))
+            {
+                throw new ServiceException("智谱异步任务失败：" + extractAsyncFailureMessage(response));
+            }
+            log.debug("AI image task async result pending, taskId={}, taskNo={}, thirdTaskId={}, taskStatus={}",
+                task.getTaskId(), task.getTaskNo(), asyncTaskId, StringUtils.defaultIfBlank(taskStatus, "PROCESSING"));
+            sleepAsyncPollInterval();
+        }
+        throw new ServiceException("智谱异步任务查询超时，任务仍未完成");
+    }
+
+    private JSONObject queryZhipuAsyncResult(AiProviderChannel channel, String resultUrl, int requestTimeoutMs)
+    {
+        try
+        {
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(resultUrl))
+                .timeout(Duration.ofMillis(requestTimeoutMs))
+                .header("Authorization", "Bearer " + channel.getApiKey())
+                .GET()
+                .build();
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            String responseText = response.body();
+            if (response.statusCode() < 200 || response.statusCode() >= 300)
+            {
+                throw new ServiceException("智谱异步结果查询失败：" + extractZhipuErrorMessage(responseText, response.statusCode()));
+            }
+            return JSON.parseObject(responseText);
+        }
+        catch (ServiceException ex)
+        {
+            throw ex;
+        }
+        catch (Exception ex)
+        {
+            throw new ServiceException("智谱异步结果查询异常：" + ex.getMessage());
+        }
+    }
+
+    private void sleepAsyncPollInterval()
+    {
+        try
+        {
+            TimeUnit.MILLISECONDS.sleep(ZHIPU_ASYNC_POLL_INTERVAL_MS);
+        }
+        catch (InterruptedException ex)
+        {
+            Thread.currentThread().interrupt();
+            throw new ServiceException("异步任务轮询被中断");
+        }
+    }
+
+    private String buildAsyncResponsePayload(JSONObject submitResponse, JSONObject finalResponse)
+    {
+        JSONObject payload = new JSONObject();
+        payload.put("submitResponse", submitResponse);
+        if (finalResponse != null)
+        {
+            payload.put("finalResponse", finalResponse);
+        }
+        return JSON.toJSONString(payload);
+    }
+
+    private String normalizeAsyncTaskStatus(String taskStatus)
+    {
+        String value = StringUtils.upperCase(StringUtils.trim(taskStatus));
+        return StringUtils.isBlank(value) ? "PROCESSING" : value;
+    }
+
+    private String extractAsyncFailureMessage(JSONObject response)
+    {
+        String message = response.getString("message");
+        if (StringUtils.isBlank(message))
+        {
+            JSONObject error = response.getJSONObject("error");
+            if (error != null)
+            {
+                message = error.getString("message");
+            }
+        }
+        if (StringUtils.isBlank(message))
+        {
+            JSONArray dataArray = response.getJSONArray("data");
+            if (dataArray != null && !dataArray.isEmpty())
+            {
+                JSONObject firstItem = dataArray.getJSONObject(0);
+                message = firstItem == null ? null : firstItem.getString("error");
+            }
+        }
+        return StringUtils.defaultIfBlank(message, "未返回明确错误信息");
+    }
+
+    private List<String> extractImageUrls(JSONObject response)
+    {
+        List<String> imageUrls = new ArrayList<>();
+        collectImageUrls(imageUrls, response.getJSONArray("data"));
+        collectImageUrls(imageUrls, response.getJSONArray("image_result"));
+        collectImageUrls(imageUrls, response.getJSONArray("images"));
+        JSONObject dataObject = response.getJSONObject("data");
+        if (dataObject != null)
+        {
+            collectImageUrl(imageUrls, dataObject.getString("url"));
+            collectImageUrl(imageUrls, dataObject.getString("image_url"));
+        }
+        collectImageUrl(imageUrls, response.getString("url"));
+        collectImageUrl(imageUrls, response.getString("image_url"));
+        return imageUrls;
+    }
+
+    private void collectImageUrls(List<String> imageUrls, JSONArray dataArray)
+    {
+        if (dataArray == null || dataArray.isEmpty())
+        {
+            return;
+        }
+        for (int i = 0; i < dataArray.size(); i++)
+        {
+            JSONObject item = dataArray.getJSONObject(i);
+            if (item == null)
+            {
+                continue;
+            }
+            collectImageUrl(imageUrls, item.getString("url"));
+            collectImageUrl(imageUrls, item.getString("image_url"));
+        }
+    }
+
+    private void collectImageUrl(List<String> imageUrls, String imageUrl)
+    {
+        if (StringUtils.isBlank(imageUrl) || imageUrls.contains(imageUrl))
+        {
+            return;
+        }
+        imageUrls.add(imageUrl);
+    }
+
+    private String buildZhipuAsyncSubmitUrl(String baseUrl)
+    {
+        String normalized = normalizeZhipuBaseUrl(baseUrl);
+        if (normalized.endsWith("/async/images/generations"))
+        {
+            return normalized;
+        }
+        if (normalized.endsWith("/api/paas/v4"))
+        {
+            return normalized + "/async/images/generations";
+        }
+        return normalized + "/api/paas/v4/async/images/generations";
+    }
+
+    private String buildZhipuAsyncResultUrl(String baseUrl, String asyncTaskId)
+    {
+        String normalized = normalizeZhipuBaseUrl(baseUrl);
+        if (normalized.endsWith("/api/paas/v4"))
+        {
+            return normalized + "/async-result/" + asyncTaskId;
+        }
+        return normalized + "/api/paas/v4/async-result/" + asyncTaskId;
+    }
+
+    private String normalizeZhipuBaseUrl(String baseUrl)
+    {
+        return baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+    }
+
     private String buildZhipuRequestUrl(String baseUrl)
     {
-        String normalized = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        String normalized = normalizeZhipuBaseUrl(baseUrl);
         if (normalized.endsWith("/api/paas/v4/images/generations"))
         {
             return normalized;
@@ -531,6 +731,11 @@ public class AiTaskServiceImpl implements IAiTaskService
     private int resolveTimeoutMs(AiProviderChannel channel)
     {
         return channel.getTimeoutMs() == null || channel.getTimeoutMs() <= 0 ? 60000 : channel.getTimeoutMs();
+    }
+
+    private long resolveAsyncWaitTimeoutMs(AiProviderChannel channel)
+    {
+        return Math.max(resolveTimeoutMs(channel), ZHIPU_ASYNC_MIN_WAIT_MS);
     }
 
     private String buildZhipuPrompt(AiTask task)

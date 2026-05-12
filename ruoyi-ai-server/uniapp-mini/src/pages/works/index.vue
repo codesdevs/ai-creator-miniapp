@@ -76,7 +76,7 @@
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getMyTaskList } from '@/api/task'
-import { isLoggedIn, requireLogin } from '@/utils/auth'
+import { isLoggedIn, navigateToLogin, requireLogin } from '@/utils/auth'
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -160,7 +160,7 @@ function handleEmptyAction() {
     uni.switchTab({ url: '/pages/app/index' })
     return
   }
-  uni.navigateTo({ url: '/pages/login/index' })
+  navigateToLogin('/pages/works/index')
 }
 
 function repeatCreate(item) {

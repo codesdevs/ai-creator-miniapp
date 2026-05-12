@@ -38,3 +38,10 @@ export function cancelRechargeOrder(orderId) {
     method: 'DELETE'
   })
 }
+
+export function mockPayRechargeOrder(orderId) {
+  return request({
+    url: `/app/order/${orderId}/mockPay`,
+    method: 'POST'
+  })
+}

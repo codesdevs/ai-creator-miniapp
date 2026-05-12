@@ -58,15 +58,40 @@
 
     <el-table v-loading="loading" :data="modelList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="ID" align="center" prop="modelId" width="80" />
-      <el-table-column label="模型名称" align="center" prop="modelName" min-width="140" />
-      <el-table-column label="模型编码" align="center" prop="modelCode" min-width="140" />
-      <el-table-column label="类型" align="center" prop="modelType" width="90" />
-      <el-table-column label="官方提供商" align="center" min-width="120">
-        <template #default="scope">{{ scope.row.providerName || scope.row.provider || '-' }}</template>
+      <el-table-column label="模型" align="center" min-width="220">
+        <template #default="scope">
+          <div class="summary-cell">
+            <div class="summary-main">{{ scope.row.modelName || "-" }}</div>
+            <div class="summary-sub">{{ scope.row.modelCode || "-" }} / ID {{ scope.row.modelId || "-" }}</div>
+          </div>
+        </template>
       </el-table-column>
-      <el-table-column label="能力标签" align="center" prop="capabilities" min-width="180" :show-overflow-tooltip="true" />
-      <el-table-column label="排序" align="center" prop="sort" width="80" />
+      <el-table-column label="类型 / 提供商" align="center" min-width="180">
+        <template #default="scope">
+          <div class="summary-cell">
+            <div class="summary-main">{{ scope.row.modelType || "-" }}</div>
+            <div class="summary-sub">{{ scope.row.providerName || scope.row.provider || "-" }}</div>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="能力摘要" align="center" min-width="240">
+        <template #default="scope">
+          <div class="summary-cell">
+            <div class="summary-tags">
+              <el-tag
+                v-for="item in formatArrayField(scope.row.capabilities).slice(0, 3)"
+                :key="`capability-${scope.row.modelId}-${item}`"
+                size="small"
+                effect="plain"
+              >
+                {{ item }}
+              </el-tag>
+              <span v-if="!formatArrayField(scope.row.capabilities).length" class="summary-sub">未配置能力</span>
+            </div>
+            <div class="summary-sub">排序 {{ scope.row.sort ?? 0 }}</div>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" align="center" prop="status" width="90">
         <template #default="scope">
           <el-tag :type="scope.row.status === '0' ? 'success' : 'info'">
@@ -176,12 +201,48 @@
             <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAddVersion" v-hasPermi="['ai:modelVersion:add']">新增版本</el-button></el-col>
           </el-row>
           <el-table v-loading="assetLoading" :data="versionList">
-            <el-table-column label="版本名称" prop="versionName" min-width="140" />
-            <el-table-column label="版本编码" prop="versionCode" min-width="140" />
-            <el-table-column label="实际模型名" prop="apiModelName" min-width="160" show-overflow-tooltip />
-            <el-table-column label="算力" prop="powerCost" width="90" />
-            <el-table-column label="输入单价" prop="inputPrice" width="100" />
-            <el-table-column label="输出单价" prop="outputPrice" width="100" />
+            <el-table-column label="版本" min-width="220">
+              <template #default="scope">
+                <div class="summary-cell">
+                  <div class="summary-main">{{ scope.row.versionName || "-" }}</div>
+                  <div class="summary-sub">{{ scope.row.versionCode || "-" }} / ID {{ scope.row.versionId || "-" }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="实际模型" min-width="180" show-overflow-tooltip>
+              <template #default="scope">
+                <div class="summary-cell">
+                  <div class="summary-main">{{ scope.row.apiModelName || "-" }}</div>
+                  <div class="summary-sub">上下文 {{ scope.row.contextLength ?? 0 }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="计费摘要" min-width="180">
+              <template #default="scope">
+                <div class="summary-cell">
+                  <div class="summary-main">算力 {{ scope.row.powerCost ?? 0 }}</div>
+                  <div class="summary-sub">输入 {{ scope.row.inputPrice ?? 0 }} / 输出 {{ scope.row.outputPrice ?? 0 }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="比例 / 模式" min-width="240">
+              <template #default="scope">
+                <div class="summary-cell">
+                  <div class="summary-tags">
+                    <el-tag
+                      v-for="item in formatArrayField(scope.row.supportRatio).slice(0, 3)"
+                      :key="`asset-ratio-${scope.row.versionId}-${item}`"
+                      size="small"
+                      effect="plain"
+                    >
+                      {{ item }}
+                    </el-tag>
+                    <span v-if="!formatArrayField(scope.row.supportRatio).length" class="summary-sub">未配置比例</span>
+                  </div>
+                  <div class="summary-sub">模式: {{ formatArrayField(scope.row.supportMode).join(" / ") || "-" }}</div>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column label="状态" prop="status" width="90">
               <template #default="scope"><el-tag :type="scope.row.status === '0' ? 'success' : 'info'">{{ scope.row.status === '0' ? '正常' : '停用' }}</el-tag></template>
             </el-table-column>
@@ -199,13 +260,30 @@
             <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAddRelation" v-hasPermi="['ai:channelModelRelation:add']">新增映射</el-button></el-col>
           </el-row>
           <el-table v-loading="assetLoading" :data="relationList">
-            <el-table-column label="提供商" prop="providerName" min-width="120" />
-            <el-table-column label="渠道" prop="channelName" min-width="140" />
-            <el-table-column label="版本" prop="versionName" min-width="140" />
-            <el-table-column label="远程模型名" prop="remoteModelName" min-width="180" show-overflow-tooltip />
-            <el-table-column label="价格系数" prop="priceRatio" width="100" />
-            <el-table-column label="优先级" prop="priority" width="90" />
-            <el-table-column label="权重" prop="weight" width="90" />
+            <el-table-column label="渠道" min-width="220">
+              <template #default="scope">
+                <div class="summary-cell">
+                  <div class="summary-main">{{ scope.row.channelName || "-" }}</div>
+                  <div class="summary-sub">{{ scope.row.providerName || "-" }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="版本 / 远端模型" min-width="240">
+              <template #default="scope">
+                <div class="summary-cell">
+                  <div class="summary-main">{{ scope.row.versionName || "-" }}</div>
+                  <div class="summary-sub">{{ scope.row.remoteModelName || "-" }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="调度摘要" min-width="180">
+              <template #default="scope">
+                <div class="summary-cell">
+                  <div class="summary-main">系数 {{ scope.row.priceRatio ?? 0 }}</div>
+                  <div class="summary-sub">优先级 {{ scope.row.priority ?? 0 }} / 权重 {{ scope.row.weight ?? 0 }}</div>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column label="状态" prop="enabled" width="90">
               <template #default="scope"><el-tag :type="scope.row.enabled === '0' ? 'success' : 'info'">{{ scope.row.enabled === '0' ? '启用' : '停用' }}</el-tag></template>
             </el-table-column>
@@ -220,7 +298,7 @@
       </el-tabs>
     </el-dialog>
 
-    <el-dialog :title="versionDialogTitle" v-model="versionOpen" width="760px" append-to-body>
+    <el-dialog :title="versionDialogTitle" v-model="versionOpen" width="860px" append-to-body>
       <el-form ref="versionRef" :model="versionForm" :rules="versionRules" label-width="100px">
         <el-row>
           <el-col :span="12"><el-form-item label="版本名称" prop="versionName"><el-input v-model="versionForm.versionName" /></el-form-item></el-col>
@@ -233,9 +311,59 @@
           <el-col :span="12"><el-form-item label="速度等级" prop="speedLevel"><el-input-number v-model="versionForm.speedLevel" :min="0" :max="10" style="width: 100%" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="质量等级" prop="qualityLevel"><el-input-number v-model="versionForm.qualityLevel" :min="0" :max="10" style="width: 100%" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="状态" prop="status"><el-radio-group v-model="versionForm.status"><el-radio value="0">正常</el-radio><el-radio value="1">停用</el-radio></el-radio-group></el-form-item></el-col>
-          <el-col :span="24"><el-form-item label="支持比例" prop="supportRatio"><el-input v-model="versionForm.supportRatio" /></el-form-item></el-col>
-          <el-col :span="24"><el-form-item label="支持风格" prop="supportStyle"><el-input v-model="versionForm.supportStyle" type="textarea" :rows="2" /></el-form-item></el-col>
-          <el-col :span="24"><el-form-item label="支持模式" prop="supportMode"><el-input v-model="versionForm.supportMode" /></el-form-item></el-col>
+          <el-col :span="24">
+            <div class="config-panel">
+              <div class="config-panel__title">创作能力配置</div>
+              <div class="config-panel__desc">支持自定义录入，也可直接选常用项。保存时会自动转成数组格式。</div>
+              <el-row :gutter="16">
+                <el-col :span="24">
+                  <el-form-item label="支持比例" prop="supportRatio">
+                    <el-select
+                      v-model="versionRatioValues"
+                      multiple
+                      filterable
+                      allow-create
+                      default-first-option
+                      placeholder="请选择或输入支持比例"
+                      style="width: 100%"
+                    >
+                      <el-option v-for="item in ratioPresetOptions" :key="item" :label="item" :value="item" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item label="支持风格" prop="supportStyle">
+                    <el-select
+                      v-model="versionStyleValues"
+                      multiple
+                      filterable
+                      allow-create
+                      default-first-option
+                      placeholder="请选择或输入支持风格"
+                      style="width: 100%"
+                    >
+                      <el-option v-for="item in stylePresetOptions" :key="item" :label="item" :value="item" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item label="支持模式" prop="supportMode">
+                    <el-select
+                      v-model="versionModeValues"
+                      multiple
+                      filterable
+                      allow-create
+                      default-first-option
+                      placeholder="请选择或输入支持模式"
+                      style="width: 100%"
+                    >
+                      <el-option v-for="item in modePresetOptions" :key="item" :label="item" :value="item" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
+          </el-col>
           <el-col :span="24"><el-form-item label="扩展配置" prop="extConfig"><el-input v-model="versionForm.extConfig" type="textarea" :rows="3" /></el-form-item></el-col>
           <el-col :span="24"><el-form-item label="备注" prop="remark"><el-input v-model="versionForm.remark" type="textarea" :rows="2" /></el-form-item></el-col>
         </el-row>
@@ -286,6 +414,7 @@ import { listProvider } from "@/api/ai/provider"
 import { addModelVersion, delModelVersion, getModelVersion, listModelVersion, updateModelVersion } from "@/api/ai/modelVersion"
 import { addChannelModelRelation, delChannelModelRelation, getChannelModelRelation, listChannelModelRelation, updateChannelModelRelation } from "@/api/ai/channelModelRelation"
 import { listProviderChannel } from "@/api/ai/providerChannel"
+import { computed } from "vue"
 
 const { proxy } = getCurrentInstance()
 
@@ -310,6 +439,9 @@ const versionOpen = ref(false)
 const relationOpen = ref(false)
 const versionDialogTitle = ref("")
 const relationDialogTitle = ref("")
+const ratioPresetOptions = ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"]
+const stylePresetOptions = ["PHOTO", "REALISTIC", "ANIME", "ILLUSTRATION", "3D", "WATERCOLOR", "CUSTOM"]
+const modePresetOptions = ["TEXT_TO_IMAGE", "IMAGE_TO_IMAGE", "UPSCALE", "INPAINT"]
 
 const data = reactive({
   form: {},
@@ -341,6 +473,55 @@ const data = reactive({
 })
 
 const { queryParams, form, rules, versionForm, relationForm, versionRules, relationRules } = toRefs(data)
+
+const versionRatioValues = computed({
+  get: () => parseArrayLike(versionForm.value.supportRatio),
+  set: value => {
+    versionForm.value.supportRatio = stringifyArrayLike(value)
+  }
+})
+
+const versionStyleValues = computed({
+  get: () => parseArrayLike(versionForm.value.supportStyle),
+  set: value => {
+    versionForm.value.supportStyle = stringifyArrayLike(value)
+  }
+})
+
+const versionModeValues = computed({
+  get: () => parseArrayLike(versionForm.value.supportMode),
+  set: value => {
+    versionForm.value.supportMode = stringifyArrayLike(value)
+  }
+})
+
+function parseArrayLike(value) {
+  if (!value) return []
+  if (Array.isArray(value)) return value.filter(Boolean).map(item => String(item).trim()).filter(Boolean)
+  const text = String(value).trim()
+  if (!text) return []
+  try {
+    const parsed = JSON.parse(text)
+    if (Array.isArray(parsed)) {
+      return parsed.filter(Boolean).map(item => String(item).trim()).filter(Boolean)
+    }
+  } catch (error) {
+    // Fall through to plain split parsing.
+  }
+  return text
+    .split(/[,\n，]/)
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function stringifyArrayLike(value) {
+  const normalized = (value || []).map(item => String(item).trim()).filter(Boolean)
+  return normalized.length ? JSON.stringify(normalized) : undefined
+}
+
+function formatArrayField(value) {
+  return parseArrayLike(value)
+}
 
 function getList() {
   loading.value = true
@@ -589,3 +770,49 @@ getList()
 getProviderOptions()
 getChannelOptions()
 </script>
+
+<style scoped>
+.summary-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.summary-main {
+  color: #111827;
+  font-weight: 500;
+}
+
+.summary-sub {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.summary-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.config-panel {
+  padding: 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.config-panel__title {
+  margin-bottom: 6px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.config-panel__desc {
+  margin-bottom: 16px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.6;
+}
+</style>

@@ -6,9 +6,10 @@
     </view>
 
     <view class="profile-section">
-      <view class="avatar">{{ avatarText }}</view>
+      <image v-if="userAvatar" class="avatar avatar-image" :src="userAvatar" mode="aspectFill" />
+      <view v-else class="avatar">{{ avatarText }}</view>
       <view class="profile-main" @tap="handleProfileTap">
-        <text class="profile-name">{{ user ? user.nickName : '未登录' }}</text>
+        <text class="profile-name">{{ user ? displayName : '未登录' }}</text>
         <text class="profile-desc">{{ user ? profileDesc : '登录后可查看您的数字作品' }}</text>
       </view>
     </view>
@@ -82,8 +83,17 @@ const user = ref(null)
 const wallet = ref({})
 const works = ref([])
 
+const displayName = computed(() => {
+  if (!user.value) {
+    return ''
+  }
+  return user.value.nickName || user.value.userName || user.value.mobile || user.value.userNo || '已登录用户'
+})
+
+const userAvatar = computed(() => user.value?.avatar || user.value?.avatarUrl || '')
+
 const avatarText = computed(() => {
-  const name = user.value?.nickName || ''
+  const name = displayName.value
   return name ? name.slice(0, 1).toUpperCase() : 'U'
 })
 
@@ -91,7 +101,7 @@ const profileDesc = computed(() => {
   if (!user.value) {
     return ''
   }
-  return user.value.inviteCode ? `邀请码：${user.value.inviteCode}` : `用户编号：${user.value.userNo || '-'}`
+  return user.value.inviteCode ? `邀请码：${user.value.inviteCode}` : `用户编号：${user.value.userNo || user.value.userId || '-'}`
 })
 
 const stats = computed(() => [
@@ -181,27 +191,29 @@ async function loadProfile() {
     works.value = []
     return
   }
-  try {
-    const cachedUser = getUser()
-    if (cachedUser?.userId) {
-      user.value = cachedUser
-    }
-    const [profileRes, walletRes, taskRes] = await Promise.all([
-      getProfile(),
-      getWalletInfo(),
-      getMyTaskList()
-    ])
-    user.value = profileRes.data || null
-    wallet.value = walletRes.data || {}
-    works.value = taskRes.data || []
-    if (user.value) {
-      setUser(user.value)
-    }
-  } catch (error) {
-    user.value = null
-    wallet.value = {}
-    works.value = []
+  const cachedUser = getUser()
+  if (cachedUser && Object.keys(cachedUser).length) {
+    user.value = cachedUser
   }
+
+  const [profileResult, walletResult, taskResult] = await Promise.allSettled([
+    getProfile(),
+    getWalletInfo(),
+    getMyTaskList()
+  ])
+
+  if (profileResult.status === 'fulfilled') {
+    const profile = profileResult.value?.data
+    if (profile) {
+      user.value = profile
+      setUser(profile)
+    }
+  } else if (!user.value) {
+    uni.showToast({ title: profileResult.reason?.message || '用户信息加载失败', icon: 'none' })
+  }
+
+  wallet.value = walletResult.status === 'fulfilled' ? walletResult.value?.data || {} : {}
+  works.value = taskResult.status === 'fulfilled' ? taskResult.value?.data || [] : []
 }
 
 function handleProfileTap() {
@@ -327,6 +339,11 @@ onShow(loadProfile)
   color: #d6d6e1;
   font-size: 48rpx;
   font-weight: 800;
+}
+
+.avatar-image {
+  display: block;
+  overflow: hidden;
 }
 
 .profile-main {

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AiApplicationMapper">
+
+    <resultMap type="AiAppCategory" id="AiAppCategoryResult">
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="iconUrl" column="icon_url"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap type="AiApp" id="AiAppResult">
+        <result property="appId" column="app_id"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="appCode" column="app_code"/>
+        <result property="appName" column="app_name"/>
+        <result property="appType" column="app_type"/>
+        <result property="abilityType" column="ability_type"/>
+        <result property="iconUrl" column="icon_url"/>
+        <result property="cardImageUrl" column="card_image_url"/>
+        <result property="description" column="description"/>
+        <result property="intro" column="intro"/>
+        <result property="routeUrl" column="route_url"/>
+        <result property="modelId" column="model_id"/>
+        <result property="modelVersionId" column="model_version_id"/>
+        <result property="pricingMode" column="pricing_mode"/>
+        <result property="powerCost" column="power_cost"/>
+        <result property="tags" column="tags"/>
+        <result property="formSchema" column="form_schema"/>
+        <result property="isHot" column="is_hot"/>
+        <result property="isRecommend" column="is_recommend"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap type="AiAppMode" id="AiAppModeResult">
+        <result property="modeId" column="mode_id"/>
+        <result property="appId" column="app_id"/>
+        <result property="modeCode" column="mode_code"/>
+        <result property="modeName" column="mode_name"/>
+        <result property="modeType" column="mode_type"/>
+        <result property="placeholder" column="placeholder"/>
+        <result property="intro" column="intro"/>
+        <result property="powerCost" column="power_cost"/>
+        <result property="promptTemplate" column="prompt_template"/>
+        <result property="formSchema" column="form_schema"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap type="AiAppModelRelation" id="AiAppModelRelationResult">
+        <result property="relationId" column="relation_id"/>
+        <result property="appId" column="app_id"/>
+        <result property="modelId" column="model_id"/>
+        <result property="defaultVersionId" column="default_version_id"/>
+        <result property="displayName" column="display_name"/>
+        <result property="intro" column="intro"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+        <result property="modelCode" column="model_code"/>
+        <result property="modelName" column="model_name"/>
+        <result property="modelType" column="model_type"/>
+        <result property="provider" column="provider"/>
+    </resultMap>
+
+    <resultMap type="AiModelVersion" id="AiApplicationVersionResult">
+        <result property="versionId" column="version_id"/>
+        <result property="modelId" column="model_id"/>
+        <result property="versionCode" column="version_code"/>
+        <result property="versionName" column="version_name"/>
+        <result property="powerCost" column="power_cost"/>
+        <result property="supportRatio" column="support_ratio"/>
+        <result property="supportStyle" column="support_style"/>
+        <result property="supportMode" column="support_mode"/>
+        <result property="versionIntro" column="version_intro"/>
+        <result property="supportSize" column="support_size"/>
+        <result property="defaultRatio" column="default_ratio"/>
+        <result property="defaultSize" column="default_size"/>
+        <result property="modeConfig" column="mode_config"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap type="AiStylePreset" id="AiStylePresetResult">
+        <result property="styleId" column="style_id"/>
+        <result property="styleCode" column="style_code"/>
+        <result property="styleName" column="style_name"/>
+        <result property="styleType" column="style_type"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="promptSuffix" column="prompt_suffix"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="selectEnabledCategoryList" resultMap="AiAppCategoryResult">
+        select category_id, category_code, category_name, parent_id, icon_url, sort, status
+        from ai_c_app_category
+        where status = '0'
+        order by sort asc, category_id asc
+    </select>
+
+    <select id="selectEnabledAppListByCategoryId" parameterType="Long" resultMap="AiAppResult">
+        select app_id, category_id, app_code, app_name, app_type, ability_type, icon_url, card_image_url,
+               description, intro, route_url, model_id, model_version_id, pricing_mode, power_cost, tags,
+               form_schema, is_hot, is_recommend, sort, status
+        from ai_c_app
+        where status = '0' and category_id = #{categoryId}
+        order by sort asc, app_id asc
+    </select>
+
+    <select id="selectEnabledApp" resultMap="AiAppResult">
+        select app_id, category_id, app_code, app_name, app_type, ability_type, icon_url, card_image_url,
+               description, intro, route_url, model_id, model_version_id, pricing_mode, power_cost, tags,
+               form_schema, is_hot, is_recommend, sort, status
+        from ai_c_app
+        where status = '0'
+        <choose>
+            <when test="appId != null">and app_id = #{appId}</when>
+            <otherwise>and app_code = #{appCode}</otherwise>
+        </choose>
+        limit 1
+    </select>
+
+    <select id="selectEnabledModeListByAppId" parameterType="Long" resultMap="AiAppModeResult">
+        select mode_id, app_id, mode_code, mode_name, mode_type, placeholder, intro, power_cost,
+               prompt_template, form_schema, sort, status
+        from ai_c_app_mode
+        where status = '0' and app_id = #{appId}
+        order by sort asc, mode_id asc
+    </select>
+
+    <select id="selectEnabledModelListByAppId" parameterType="Long" resultMap="AiAppModelRelationResult">
+        select r.relation_id, r.app_id, r.model_id, r.default_version_id, r.display_name, r.intro,
+               r.sort, r.status, m.model_code, m.model_name, m.model_type, m.provider
+        from ai_c_app_model_relation r
+        inner join ai_c_model m on m.model_id = r.model_id and m.status = '0'
+        where r.status = '0' and r.app_id = #{appId}
+        order by r.sort asc, r.relation_id asc
+    </select>
+
+    <select id="selectEnabledVersionListByModelId" parameterType="Long" resultMap="AiApplicationVersionResult">
+        select version_id, model_id, version_code, version_name, power_cost, support_ratio, support_style,
+               support_mode, version_intro, support_size, default_ratio, default_size, mode_config, status
+        from ai_c_model_version
+        where status = '0' and model_id = #{modelId}
+        order by version_id asc
+    </select>
+
+    <select id="selectEnabledStyleListByVersionId" parameterType="Long" resultMap="AiStylePresetResult">
+        select s.style_id, s.style_code, s.style_name, s.style_type, s.cover_url, s.prompt_suffix, s.sort, s.status
+        from ai_c_style_preset s
+        inner join ai_c_model_version_style vs on vs.style_id = s.style_id
+        where s.status = '0' and vs.version_id = #{versionId}
+        order by s.sort asc, s.style_id asc
+    </select>
+</mapper>

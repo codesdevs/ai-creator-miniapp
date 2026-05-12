@@ -58,6 +58,21 @@ public class AiModelVersion extends BaseEntity
     /** 支持模式 */
     private String supportMode;
 
+    /** 版本介绍 */
+    private String versionIntro;
+
+    /** 支持尺寸 */
+    private String supportSize;
+
+    /** 默认比例 */
+    private String defaultRatio;
+
+    /** 默认尺寸 */
+    private String defaultSize;
+
+    /** 模式配置 */
+    private String modeConfig;
+
     /** 扩展配置 */
     private String extConfig;
 
@@ -211,6 +226,56 @@ public class AiModelVersion extends BaseEntity
     public void setSupportMode(String supportMode)
     {
         this.supportMode = supportMode;
+    }
+
+    public String getVersionIntro()
+    {
+        return versionIntro;
+    }
+
+    public void setVersionIntro(String versionIntro)
+    {
+        this.versionIntro = versionIntro;
+    }
+
+    public String getSupportSize()
+    {
+        return supportSize;
+    }
+
+    public void setSupportSize(String supportSize)
+    {
+        this.supportSize = supportSize;
+    }
+
+    public String getDefaultRatio()
+    {
+        return defaultRatio;
+    }
+
+    public void setDefaultRatio(String defaultRatio)
+    {
+        this.defaultRatio = defaultRatio;
+    }
+
+    public String getDefaultSize()
+    {
+        return defaultSize;
+    }
+
+    public void setDefaultSize(String defaultSize)
+    {
+        this.defaultSize = defaultSize;
+    }
+
+    public String getModeConfig()
+    {
+        return modeConfig;
+    }
+
+    public void setModeConfig(String modeConfig)
+    {
+        this.modeConfig = modeConfig;
     }
 
     public String getExtConfig()

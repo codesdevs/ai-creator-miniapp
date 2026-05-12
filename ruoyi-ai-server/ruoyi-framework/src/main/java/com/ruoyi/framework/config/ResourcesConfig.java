@@ -53,7 +53,8 @@ public class ResourcesConfig implements WebMvcConfigurer
         registry.addInterceptor(appTokenInterceptor)
                 .addPathPatterns("/app/**")
                 .excludePathPatterns(
-                        "/app/auth/**",
+                        "/app/auth/devLogin",
+                        "/app/auth/wxLogin",
                         "/app/model/list",
                         "/app/model/detail/**",
                         "/app/model/versionList/**");

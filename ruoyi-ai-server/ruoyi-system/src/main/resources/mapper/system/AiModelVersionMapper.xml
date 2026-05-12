@@ -19,6 +19,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="supportRatio" column="support_ratio"/>
         <result property="supportStyle" column="support_style"/>
         <result property="supportMode" column="support_mode"/>
+        <result property="versionIntro" column="version_intro"/>
+        <result property="supportSize" column="support_size"/>
+        <result property="defaultRatio" column="default_ratio"/>
+        <result property="defaultSize" column="default_size"/>
+        <result property="modeConfig" column="mode_config"/>
         <result property="extConfig" column="ext_config"/>
         <result property="status" column="status"/>
         <result property="remark" column="remark"/>
@@ -32,7 +37,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <sql id="selectAiModelVersionVo">
         select v.version_id, v.model_id, v.version_code, v.version_name, v.api_model_name, v.power_cost,
                v.context_length, v.input_price, v.output_price, v.speed_level, v.quality_level, v.support_ratio, v.support_style,
-               v.support_mode, v.ext_config, v.status, v.remark, v.create_by, v.create_time, v.update_by, v.update_time,
+               v.support_mode, v.version_intro, v.support_size, v.default_ratio, v.default_size, v.mode_config, v.ext_config,
+               v.status, v.remark, v.create_by, v.create_time, v.update_by, v.update_time,
                m.model_name
         from ai_c_model_version v
         left join ai_c_model m on m.model_id = v.model_id
@@ -83,6 +89,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="supportRatio != null and supportRatio != ''">support_ratio,</if>
             <if test="supportStyle != null and supportStyle != ''">support_style,</if>
             <if test="supportMode != null and supportMode != ''">support_mode,</if>
+            <if test="versionIntro != null and versionIntro != ''">version_intro,</if>
+            <if test="supportSize != null and supportSize != ''">support_size,</if>
+            <if test="defaultRatio != null and defaultRatio != ''">default_ratio,</if>
+            <if test="defaultSize != null and defaultSize != ''">default_size,</if>
+            <if test="modeConfig != null and modeConfig != ''">mode_config,</if>
             <if test="extConfig != null and extConfig != ''">ext_config,</if>
             <if test="status != null and status != ''">status,</if>
             <if test="remark != null and remark != ''">remark,</if>
@@ -103,6 +114,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="supportRatio != null and supportRatio != ''">#{supportRatio},</if>
             <if test="supportStyle != null and supportStyle != ''">#{supportStyle},</if>
             <if test="supportMode != null and supportMode != ''">#{supportMode},</if>
+            <if test="versionIntro != null and versionIntro != ''">#{versionIntro},</if>
+            <if test="supportSize != null and supportSize != ''">#{supportSize},</if>
+            <if test="defaultRatio != null and defaultRatio != ''">#{defaultRatio},</if>
+            <if test="defaultSize != null and defaultSize != ''">#{defaultSize},</if>
+            <if test="modeConfig != null and modeConfig != ''">#{modeConfig},</if>
             <if test="extConfig != null and extConfig != ''">#{extConfig},</if>
             <if test="status != null and status != ''">#{status},</if>
             <if test="remark != null and remark != ''">#{remark},</if>
@@ -127,6 +143,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="supportRatio != null">support_ratio = #{supportRatio},</if>
             <if test="supportStyle != null">support_style = #{supportStyle},</if>
             <if test="supportMode != null">support_mode = #{supportMode},</if>
+            <if test="versionIntro != null">version_intro = #{versionIntro},</if>
+            <if test="supportSize != null">support_size = #{supportSize},</if>
+            <if test="defaultRatio != null">default_ratio = #{defaultRatio},</if>
+            <if test="defaultSize != null">default_size = #{defaultSize},</if>
+            <if test="modeConfig != null">mode_config = #{modeConfig},</if>
             <if test="extConfig != null">ext_config = #{extConfig},</if>
             <if test="status != null and status != ''">status = #{status},</if>
             <if test="remark != null">remark = #{remark},</if>

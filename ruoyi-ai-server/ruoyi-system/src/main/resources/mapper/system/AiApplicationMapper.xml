@@ -38,6 +38,30 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="status" column="status"/>
     </resultMap>
 
+    <resultMap type="AiAppHomeSection" id="AiAppHomeSectionResult">
+        <result property="sectionId" column="section_id"/>
+        <result property="sectionCode" column="section_code"/>
+        <result property="sectionName" column="section_name"/>
+        <result property="sectionType" column="section_type"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap type="AiAppHomeCard" id="AiAppHomeCardResult">
+        <result property="cardId" column="card_id"/>
+        <result property="sectionId" column="section_id"/>
+        <result property="appId" column="app_id"/>
+        <result property="cardCode" column="card_code"/>
+        <result property="cardName" column="card_name"/>
+        <result property="subtitle" column="subtitle"/>
+        <result property="cardImageUrl" column="card_image_url"/>
+        <result property="actionType" column="action_type"/>
+        <result property="actionValue" column="action_value"/>
+        <result property="extraConfig" column="extra_config"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
     <resultMap type="AiAppMode" id="AiAppModeResult">
         <result property="modeId" column="mode_id"/>
         <result property="appId" column="app_id"/>
@@ -101,6 +125,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from ai_c_app_category
         where status = '0'
         order by sort asc, category_id asc
+    </select>
+
+    <select id="selectEnabledHomeSectionList" resultMap="AiAppHomeSectionResult">
+        select section_id, section_code, section_name, section_type, sort, status
+        from ai_c_app_home_section
+        where status = '0'
+        order by sort asc, section_id asc
+    </select>
+
+    <select id="selectEnabledHomeCardListBySectionId" parameterType="Long" resultMap="AiAppHomeCardResult">
+        select card_id, section_id, app_id, card_code, card_name, subtitle, card_image_url,
+               action_type, action_value, extra_config, sort, status
+        from ai_c_app_home_card
+        where status = '0' and section_id = #{sectionId}
+        order by sort asc, card_id asc
     </select>
 
     <select id="selectEnabledAppListByCategoryId" parameterType="Long" resultMap="AiAppResult">

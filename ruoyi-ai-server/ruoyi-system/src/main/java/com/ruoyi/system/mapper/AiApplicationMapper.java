@@ -2,6 +2,8 @@ package com.ruoyi.system.mapper;
 
 import com.ruoyi.system.domain.AiApp;
 import com.ruoyi.system.domain.AiAppCategory;
+import com.ruoyi.system.domain.AiAppHomeCard;
+import com.ruoyi.system.domain.AiAppHomeSection;
 import com.ruoyi.system.domain.AiAppMode;
 import com.ruoyi.system.domain.AiAppModelRelation;
 import com.ruoyi.system.domain.AiModelVersion;
@@ -15,6 +17,10 @@ import org.apache.ibatis.annotations.Param;
 public interface AiApplicationMapper
 {
     public List<AiAppCategory> selectEnabledCategoryList();
+
+    public List<AiAppHomeSection> selectEnabledHomeSectionList();
+
+    public List<AiAppHomeCard> selectEnabledHomeCardListBySectionId(Long sectionId);
 
     public List<AiApp> selectEnabledAppListByCategoryId(Long categoryId);
 

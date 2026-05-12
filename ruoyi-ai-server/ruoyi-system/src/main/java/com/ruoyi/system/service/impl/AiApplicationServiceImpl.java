@@ -3,6 +3,7 @@ package com.ruoyi.system.service.impl;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.system.domain.AiApp;
 import com.ruoyi.system.domain.AiAppCategory;
+import com.ruoyi.system.domain.AiAppHomeSection;
 import com.ruoyi.system.domain.AiAppModelRelation;
 import com.ruoyi.system.domain.AiModelVersion;
 import com.ruoyi.system.mapper.AiApplicationMapper;
@@ -31,7 +32,15 @@ public class AiApplicationServiceImpl implements IAiApplicationService
             category.getParams().put("appList", aiApplicationMapper.selectEnabledAppListByCategoryId(category.getCategoryId()));
         }
 
+        List<AiAppHomeSection> sectionList = aiApplicationMapper.selectEnabledHomeSectionList();
+        for (AiAppHomeSection section : sectionList)
+        {
+            section.getParams().put("cardList", aiApplicationMapper.selectEnabledHomeCardListBySectionId(section.getSectionId()));
+        }
+
         Map<String, Object> result = new HashMap<>();
+        result.put("bannerList", List.of(Map.of("imageUrl", "/static/images/banner_home.png", "actionType", "NONE")));
+        result.put("sectionList", sectionList);
         result.put("categoryList", categoryList);
         return result;
     }

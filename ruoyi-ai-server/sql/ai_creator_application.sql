@@ -44,6 +44,40 @@ create table if not exists ai_c_app (
     key idx_ai_c_app_status_sort (status, sort)
 ) comment = 'AI应用入口';
 
+create table if not exists ai_c_app_home_section (
+    section_id    bigint       not null auto_increment comment '分组ID',
+    section_code  varchar(64)  not null comment '分组编码',
+    section_name  varchar(64)  not null comment '分组名称',
+    section_type  varchar(32)  default 'GRID' comment '分组类型 GRID/SCROLL',
+    sort          int          default 0 comment '排序',
+    status        char(1)      default '0' comment '状态（0启用 1停用）',
+    create_time   datetime     default current_timestamp comment '创建时间',
+    update_time   datetime     default null comment '更新时间',
+    primary key (section_id),
+    unique key uk_ai_c_app_home_section_code (section_code),
+    key idx_ai_c_app_home_section_status_sort (status, sort)
+) comment = 'AI应用首页分组';
+
+create table if not exists ai_c_app_home_card (
+    card_id         bigint       not null auto_increment comment '卡片ID',
+    section_id      bigint       not null comment '分组ID',
+    app_id          bigint       default null comment '关联应用ID',
+    card_code       varchar(64)  not null comment '卡片编码',
+    card_name       varchar(64)  not null comment '卡片名称',
+    subtitle        varchar(128) default '' comment '副标题',
+    card_image_url  varchar(255) default '' comment '卡片图',
+    action_type     varchar(32)  default 'APP' comment '动作类型 APP/ROUTE/TOAST/NONE',
+    action_value    varchar(255) default '' comment '动作值',
+    extra_config    longtext     comment '扩展配置JSON',
+    sort            int          default 0 comment '排序',
+    status          char(1)      default '0' comment '状态（0启用 1停用）',
+    create_time     datetime     default current_timestamp comment '创建时间',
+    update_time     datetime     default null comment '更新时间',
+    primary key (card_id),
+    unique key uk_ai_c_app_home_card_code (card_code),
+    key idx_ai_c_app_home_card_section (section_id, status, sort)
+) comment = 'AI应用首页卡片';
+
 create table if not exists ai_c_app_mode (
     mode_id          bigint       not null auto_increment comment '模式ID',
     app_id           bigint       not null comment '应用ID',
@@ -172,6 +206,15 @@ values
     (5, 'AI_AGENT', 'AI智能体', 5, '0')
 on duplicate key update category_name = values(category_name), sort = values(sort), status = values(status);
 
+insert into ai_c_app_home_section (section_id, section_code, section_name, section_type, sort, status)
+values
+    (1, 'TEXT_CREATE', '文本创作', 'GRID', 1, '0'),
+    (2, 'IMAGE_CREATE', '图片创作', 'GRID', 2, '0'),
+    (3, 'VIDEO_CREATE', '视频创作', 'GRID', 3, '0'),
+    (4, 'IMAGE_TOOL', '图片工具箱', 'GRID', 4, '0'),
+    (5, 'AI_AGENT', 'AI智能体', 'GRID', 5, '0')
+on duplicate key update section_name = values(section_name), section_type = values(section_type), sort = values(sort), status = values(status);
+
 insert into ai_c_app
     (app_id, category_id, app_code, app_name, app_type, ability_type, card_image_url, description, intro, route_url, pricing_mode, power_cost, sort, status)
 values
@@ -183,6 +226,26 @@ values
     (6, 1, 'summary', '文案精简', 'TEMPLATE', 'TEXT', '/static/images/application/index/wbcz/wajj.png', '快速提炼精准表达', '压缩长文案，保留核心卖点。', '/pages/create/text', 'FIXED', 2, 6, '0'),
     (20, 2, 'image_create', '图片创作', 'MODEL', 'IMAGE', '/static/images/application/index/tpcz/jmai.png', '多模型图片创作', '聚合即梦、通义万象、可灵等图片创作模型。', '/pages/create/image-studio', 'DYNAMIC', 20, 1, '0')
 on duplicate key update app_name = values(app_name), card_image_url = values(card_image_url), description = values(description), intro = values(intro), route_url = values(route_url), pricing_mode = values(pricing_mode), power_cost = values(power_cost), sort = values(sort), status = values(status);
+
+insert into ai_c_app_home_card
+    (card_id, section_id, app_id, card_code, card_name, subtitle, card_image_url, action_type, action_value, sort, status)
+values
+    (1, 1, 1, 'copywriting', '文案创作', '爆文自带流量', '/static/images/application/index/wbcz/wacz.png', 'ROUTE', '/pages/create/text?mode=copywriting', 1, '0'),
+    (2, 1, 2, 'polish', '文案润色', '文案重新编排', '/static/images/application/index/wbcz/wars.png', 'ROUTE', '/pages/create/text?mode=polish', 2, '0'),
+    (3, 1, 3, 'imitate', '文案仿写', '模仿生成相似文案', '/static/images/application/index/wbcz/wafx.png', 'ROUTE', '/pages/create/text?mode=imitate', 3, '0'),
+    (4, 1, 4, 'revise', '文案订正', '快速、准确、自然', '/static/images/application/index/wbcz/wadz.png', 'ROUTE', '/pages/create/text?mode=revise', 4, '0'),
+    (5, 1, 5, 'expand', '文案扩写', '一句话生成专业文案', '/static/images/application/index/wbcz/wakx.png', 'ROUTE', '/pages/create/text?mode=expand', 5, '0'),
+    (6, 1, 6, 'summary', '文案精简', '快速提炼精准表达', '/static/images/application/index/wbcz/wajj.png', 'ROUTE', '/pages/create/text?mode=summary', 6, '0'),
+    (20, 2, 20, 'jimeng', '即梦AI', '字节跳动图片模型', '/static/images/application/index/tpcz/jmai.png', 'ROUTE', '/pages/create/image-studio?model=jimeng', 1, '0'),
+    (21, 2, 20, 'keling', '可灵AI', '快手 AI大模型', '/static/images/application/index/tpcz/klai.png', 'ROUTE', '/pages/create/image-studio?model=keling', 2, '0'),
+    (22, 2, 20, 'seedream', 'Seedream', '字节跳动图片模型', '/static/images/application/index/tpcz/seedream.png', 'ROUTE', '/pages/create/image-studio?model=seedream', 3, '0'),
+    (23, 2, 20, 'banana', 'Nano Banana', '轻量快速出图', '/static/images/application/index/tpcz/banana.png', 'ROUTE', '/pages/create/image-studio?model=banana', 4, '0'),
+    (24, 2, null, 'gpt-image-2', 'GPT Image', 'OpenAI 图片模型', '/static/images/application/index/tpcz/gpt-image-2.png', 'TOAST', 'GPT Image暂未接入', 5, '0'),
+    (25, 2, null, 'midjourney', 'Midjourney', '专业图片模型', '/static/images/application/index/tpcz/midjourney.png', 'TOAST', 'Midjourney暂未接入', 6, '0'),
+    (26, 2, null, 'luma', 'Luma', '视觉生成模型', '/static/images/application/index/tpcz/luma.png', 'TOAST', 'Luma暂未接入', 7, '0'),
+    (27, 2, null, 'sora2', 'Sora 2', 'OpenAI大模型', '/static/images/application/index/tpcz/sora2.png', 'ROUTE', '/pages/create/image-studio?model=sora2', 8, '0'),
+    (28, 2, null, 'tywx', '通义万相', '阿里通义AI大模型', '/static/images/application/index/tpcz/tywx.png', 'ROUTE', '/pages/create/image-studio?model=wanxiang', 9, '0')
+on duplicate key update card_name = values(card_name), subtitle = values(subtitle), card_image_url = values(card_image_url), action_type = values(action_type), action_value = values(action_value), sort = values(sort), status = values(status);
 
 insert into ai_c_app_mode
     (app_id, mode_code, mode_name, mode_type, placeholder, intro, power_cost, sort, status)

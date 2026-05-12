@@ -37,6 +37,18 @@
       }
     },
     {
+      "path": "pages/create/image-studio",
+      "style": {
+        "navigationBarTitleText": "图片创作"
+      }
+    },
+    {
+      "path": "pages/create/text",
+      "style": {
+        "navigationBarTitleText": "文案创作"
+      }
+    },
+    {
       "path": "pages/task/detail",
       "style": {
         "navigationBarTitleText": "任务详情"
@@ -69,22 +81,32 @@
     "list": [
       {
         "pagePath": "pages/app/index",
+        "iconPath": "static/images/icon/tabbar/app.png",
+        "selectedIconPath": "static/images/icon/tabbar/app_active.png",
         "text": "应用"
       },
       {
         "pagePath": "pages/assets/index",
+        "iconPath": "static/images/icon/tabbar/assets.png",
+        "selectedIconPath": "static/images/icon/tabbar/assets_active.png",
         "text": "资产"
       },
       {
         "pagePath": "pages/home/index",
+        "iconPath": "static/images/icon/tabbar/works.png",
+        "selectedIconPath": "static/images/icon/tabbar/works_active.png",
         "text": "首页"
       },
       {
         "pagePath": "pages/works/index",
+        "iconPath": "static/images/icon/tabbar/works.png",
+        "selectedIconPath": "static/images/icon/tabbar/works_active.png",
         "text": "作品"
       },
       {
         "pagePath": "pages/mine/index",
+        "iconPath": "static/images/icon/tabbar/works.png",
+        "selectedIconPath": "static/images/icon/tabbar/works_active.png",
         "text": "我的"
       }
     ]

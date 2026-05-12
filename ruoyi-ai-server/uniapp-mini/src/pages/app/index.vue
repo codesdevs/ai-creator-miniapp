@@ -1,112 +1,126 @@
 <template>
   <scroll-view class="page" scroll-y>
-    <view class="topbar">
-      <text class="title">模型中心</text>
-      <text class="sub">按业务能力挑模型，不按底层表结构找入口。</text>
-    </view>
+    <image class="banner" src="/static/images/banner_home.png" mode="aspectFill" />
 
-    <view class="guide-card">
-      <view class="guide-item">
-        <text class="guide-step">1</text>
-        <text class="guide-text">先选模型</text>
+    <view class="section">
+      <view class="section-head">
+        <view class="section-dot"></view>
+        <text class="section-title">文本创作</text>
       </view>
-      <view class="guide-item">
-        <text class="guide-step">2</text>
-        <text class="guide-text">再选版本参数</text>
-      </view>
-      <view class="guide-item">
-        <text class="guide-step">3</text>
-        <text class="guide-text">提交任务看结果</text>
-      </view>
-    </view>
-
-    <view class="filter-row">
-      <view
-        v-for="item in typeTabs"
-        :key="item.value"
-        :class="['filter-pill', activeType === item.value ? 'active' : '']"
-        @tap="activeType = item.value"
-      >
-        {{ item.label }}
+      <view class="tool-grid">
+        <image
+          v-for="item in textTools"
+          :key="item.key"
+          class="tool-card"
+          :src="item.image"
+          mode="aspectFill"
+          @tap="openTool(item)"
+        />
       </view>
     </view>
 
-    <view v-if="loading" class="state">加载中...</view>
-    <view v-else-if="errorMessage" class="state error">{{ errorMessage }}</view>
-    <view v-else class="card-list">
-      <view
-        v-for="item in filteredModels"
-        :key="item.modelId"
-        class="card"
-        @tap="goCreate(item)"
-      >
-        <view class="card-head">
-          <view class="card-main">
-            <text class="card-title">{{ item.modelName }}</text>
-            <text class="card-sub">{{ item.providerName || item.provider || '未配置服务商' }}</text>
-          </view>
-          <text :class="['badge', item.modelType === 'VIDEO' ? 'video' : 'image']">
-            {{ item.modelType === 'VIDEO' ? '视频' : '图片' }}
-          </text>
-        </view>
-        <text class="card-desc">{{ item.intro || '暂无简介' }}</text>
-        <view class="feature-row">
-          <text class="feature-pill">{{ item.modelType === 'VIDEO' ? '多阶段接入' : '立即可创作' }}</text>
-          <text class="feature-pill">{{ item.providerName || item.provider || '平台模型' }}</text>
-        </view>
-        <view class="card-foot">
-          <text>{{ item.modelType === 'VIDEO' ? '视频能力后续接入' : '支持进入文生图创作页' }}</text>
-          <text>›</text>
-        </view>
+    <view class="section">
+      <view class="section-head">
+        <view class="section-dot"></view>
+        <text class="section-title">图片创作</text>
+      </view>
+      <view class="tool-grid">
+        <image
+          v-for="item in imageTools"
+          :key="item.key"
+          class="tool-card"
+          :src="item.image"
+          mode="aspectFill"
+          @tap="openTool(item)"
+        />
       </view>
     </view>
   </scroll-view>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { listModel } from '@/api/model'
 
-const typeTabs = [
-  { label: '全部', value: 'ALL' },
-  { label: '图片', value: 'IMAGE' },
-  { label: '视频', value: 'VIDEO' }
+const models = ref([])
+
+const textTools = [
+  { key: 'copywriting', title: '文案创作', image: '/static/images/application/index/wbcz/wacz.png' },
+  { key: 'polish', title: '文案润色', image: '/static/images/application/index/wbcz/wars.png' },
+  { key: 'imitate', title: '文案仿写', image: '/static/images/application/index/wbcz/wafx.png' },
+  { key: 'revise', title: '文案订正', image: '/static/images/application/index/wbcz/wadz.png' },
+  { key: 'expand', title: '文案扩写', image: '/static/images/application/index/wbcz/wakx.png' },
+  { key: 'summary', title: '文案精简', image: '/static/images/application/index/wbcz/wajj.png' }
 ]
 
-const loading = ref(false)
-const errorMessage = ref('')
-const models = ref([])
-const activeType = ref('ALL')
-
-const filteredModels = computed(() => {
-  if (activeType.value === 'ALL') {
-    return models.value
-  }
-  return models.value.filter((item) => item.modelType === activeType.value)
-})
+const imageTools = [
+  {
+    key: 'jimeng',
+    title: '即梦AI',
+    image: '/static/images/application/index/tpcz/jmai.png',
+    modelKeywords: ['jimeng', '即梦']
+  },
+  {
+    key: 'keling',
+    title: '可灵AI',
+    image: '/static/images/application/index/tpcz/klai.png',
+    modelKeywords: ['keling', '可灵']
+  },
+  { key: 'seedream', title: 'Seedream', image: '/static/images/application/index/tpcz/seedream.png' },
+  { key: 'banana', title: 'Nano Banana', image: '/static/images/application/index/tpcz/banana.png' },
+  { key: 'gpt-image-2', title: 'GPT Image', image: '/static/images/application/index/tpcz/gpt-image-2.png' },
+  { key: 'midjourney', title: 'Midjourney', image: '/static/images/application/index/tpcz/midjourney.png' },
+  { key: 'luma', title: 'Luma', image: '/static/images/application/index/tpcz/luma.png' },
+  { key: 'sora2', title: 'Sora 2', image: '/static/images/application/index/tpcz/sora2.png' },
+  { key: 'tywx', title: '通义万相', image: '/static/images/application/index/tpcz/tywx.png' }
+]
 
 async function loadModels() {
-  loading.value = true
-  errorMessage.value = ''
   try {
     const [imageRes, videoRes] = await Promise.all([listModel('IMAGE'), listModel('VIDEO')])
     models.value = [...(imageRes.data || []), ...(videoRes.data || [])]
   } catch (error) {
-    errorMessage.value = error.message || '加载失败'
-  } finally {
-    loading.value = false
+    models.value = []
   }
 }
 
-function goCreate(item) {
-  if (item.modelType === 'VIDEO') {
-    uni.showToast({ title: '视频模型下一阶段接入', icon: 'none' })
+function findModel(item) {
+  const keywords = item.modelKeywords || [item.key, item.title]
+  return models.value.find((model) => {
+    const haystack = [
+      model.modelCode,
+      model.modelName,
+      model.provider,
+      model.providerName
+    ].filter(Boolean).join(' ').toLowerCase()
+    return keywords.some((keyword) => haystack.includes(String(keyword).toLowerCase()))
+  })
+}
+
+function openTool(item) {
+  if (!item.image.includes('/tpcz/')) {
+    uni.navigateTo({
+      url: `/pages/create/text?mode=${item.key}`
+    })
     return
   }
-  uni.navigateTo({
-    url: `/pages/create/image?modelId=${item.modelId}`
-  })
+
+  if (['jimeng', 'keling', 'seedream', 'banana'].includes(item.key)) {
+    uni.navigateTo({
+      url: `/pages/create/image-studio?model=${item.key}`
+    })
+    return
+  }
+
+  const model = findModel(item)
+  if (model && model.modelType !== 'VIDEO') {
+    uni.navigateTo({
+      url: `/pages/create/image?modelId=${model.modelId}`
+    })
+    return
+  }
+  uni.showToast({ title: `${item.title}暂未接入`, icon: 'none' })
 }
 
 onLoad(loadModels)
@@ -115,174 +129,59 @@ onLoad(loadModels)
 <style lang="scss">
 .page {
   min-height: 100vh;
-  padding: 26rpx 24rpx 40rpx;
-  background: #0d1121;
-  color: #fff;
+  box-sizing: border-box;
+  padding: 24rpx 30rpx 130rpx;
+  background: #0c0918;
+  color: #ffffff;
 }
 
-.topbar {
-  padding: 10rpx 4rpx 0;
-}
-
-.title {
+.banner {
   display: block;
-  font-size: 40rpx;
-  font-weight: 700;
+  width: 100%;
+  height: 300rpx;
+  border-radius: 30rpx;
+  overflow: hidden;
 }
 
-.sub {
-  display: block;
-  margin-top: 10rpx;
-  color: #99a6d3;
-  font-size: 25rpx;
+.section {
+  margin-top: 56rpx;
 }
 
-.guide-card {
+.section-head {
+  position: relative;
   display: flex;
-  gap: 14rpx;
-  margin-top: 24rpx;
-  padding: 22rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(135deg, rgba(45, 59, 123, 0.9), rgba(27, 33, 61, 0.96));
-}
-
-.guide-item {
-  flex: 1;
-  padding: 20rpx;
-  border-radius: 20rpx;
-  background: rgba(10, 14, 27, 0.3);
-}
-
-.guide-step {
-  display: inline-flex;
-  width: 40rpx;
-  height: 40rpx;
   align-items: center;
-  justify-content: center;
+  height: 54rpx;
+  margin-bottom: 28rpx;
+}
+
+.section-dot {
+  width: 20rpx;
+  height: 20rpx;
+  margin-right: -10rpx;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  color: #d9e0ff;
-  font-size: 22rpx;
-  font-weight: 700;
+  background: linear-gradient(135deg, #49d8ff 0%, #9a63ff 100%);
 }
 
-.guide-text {
+.section-title {
+  position: relative;
+  z-index: 1;
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22rpx 20rpx;
+}
+
+.tool-card {
   display: block;
-  margin-top: 14rpx;
-  color: #d7ddfa;
-  font-size: 24rpx;
-  line-height: 1.6;
-}
-
-.filter-row {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 26rpx;
-  margin-bottom: 24rpx;
-}
-
-.filter-pill {
-  padding: 12rpx 24rpx;
-  border-radius: 999rpx;
-  background: #171d33;
-  color: #92a0cf;
-  font-size: 24rpx;
-}
-
-.filter-pill.active {
-  background: linear-gradient(135deg, #4e36d8 0%, #3384ff 100%);
-  color: #fff;
-}
-
-.card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18rpx;
-}
-
-.card {
-  padding: 28rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(180deg, #1b223d 0%, #13192d 100%);
-}
-
-.card-head,
-.card-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-}
-
-.card-main {
-  flex: 1;
-}
-
-.card-title {
-  display: block;
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.card-sub {
-  display: block;
-  margin-top: 8rpx;
-  color: #9da9d8;
-  font-size: 24rpx;
-}
-
-.badge {
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
-  font-size: 22rpx;
-}
-
-.badge.image {
-  background: rgba(110, 129, 224, 0.18);
-  color: #9eb0ff;
-}
-
-.badge.video {
-  background: rgba(91, 223, 193, 0.16);
-  color: #8fe6d4;
-}
-
-.card-desc {
-  display: block;
-  margin-top: 20rpx;
-  color: #d4daf4;
-  font-size: 26rpx;
-  line-height: 1.7;
-}
-
-.feature-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  margin-top: 18rpx;
-}
-
-.feature-pill {
-  padding: 10rpx 16rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.06);
-  color: #b8c5f0;
-  font-size: 22rpx;
-}
-
-.card-foot {
-  margin-top: 24rpx;
-  color: #c9d4ff;
-  font-size: 24rpx;
-}
-
-.state {
-  padding: 30rpx 0;
-  color: #afbadf;
-  font-size: 26rpx;
-}
-
-.error {
-  color: #ff9797;
+  width: 100%;
+  height: 150rpx;
+  border-radius: 28rpx;
+  overflow: hidden;
 }
 </style>

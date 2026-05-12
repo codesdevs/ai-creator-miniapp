@@ -160,6 +160,7 @@ function formatMode(mode) {
   const map = {
     TEXT_TO_IMAGE: '文生图',
     IMAGE_TO_IMAGE: '图生图',
+    TEXT_TO_TEXT: '文本创作',
     TEXT_TO_VIDEO: '文生视频',
     IMAGE_TO_VIDEO: '图生视频'
   }

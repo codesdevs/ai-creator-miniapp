@@ -16,6 +16,17 @@
       </view>
     </scroll-view>
 
+    <scroll-view class="filter-row type-row" scroll-x>
+      <view
+        v-for="item in typeFilters"
+        :key="item.value"
+        :class="['filter-pill', activeType === item.value ? 'active' : '']"
+        @tap="activeType = item.value"
+      >
+        {{ item.label }}
+      </view>
+    </scroll-view>
+
     <view v-if="loading" class="state">加载中...</view>
     <view v-else-if="errorMessage" class="state error">{{ errorMessage }}</view>
     <view v-else-if="!filteredTasks.length" class="empty-card">
@@ -82,6 +93,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const tasks = ref([])
 const activeFilter = ref('ALL')
+const activeType = ref('ALL')
 
 const statusFilters = [
   { label: '全部', value: 'ALL' },
@@ -91,14 +103,24 @@ const statusFilters = [
   { label: '失败', value: 'FAIL' }
 ]
 
+const typeFilters = [
+  { label: '全部类型', value: 'ALL' },
+  { label: '文案', value: 'TEXT' },
+  { label: '图片', value: 'IMAGE' },
+  { label: '视频', value: 'VIDEO' }
+]
+
 const filteredTasks = computed(() => {
+  const typedTasks = activeType.value === 'ALL'
+    ? tasks.value
+    : tasks.value.filter((item) => item.taskType === activeType.value)
   if (activeFilter.value === 'ALL') {
-    return tasks.value
+    return typedTasks
   }
   if (activeFilter.value === 'RUNNING') {
-    return tasks.value.filter((item) => ['WAITING', 'RUNNING'].includes(item.status))
+    return typedTasks.filter((item) => ['WAITING', 'RUNNING'].includes(item.status))
   }
-  return tasks.value.filter((item) => item.status === activeFilter.value)
+  return typedTasks.filter((item) => item.status === activeFilter.value)
 })
 
 function statusText(status) {
@@ -126,7 +148,8 @@ function statusClass(status) {
 function formatMode(mode) {
   const map = {
     TEXT_TO_IMAGE: '文生图',
-    IMAGE_TO_IMAGE: '图生图'
+    IMAGE_TO_IMAGE: '图生图',
+    TEXT_TO_TEXT: '文本创作'
   }
   return map[mode] || mode || '-'
 }
@@ -167,6 +190,14 @@ function repeatCreate(item) {
   if (!item?.modelId || !item?.taskId) {
     return
   }
+  if (item.taskType === 'TEXT') {
+    uni.navigateTo({ url: '/pages/create/text' })
+    return
+  }
+  if (item.appId) {
+    uni.navigateTo({ url: `/pages/create/image-studio?model=${item.modelCode || ''}` })
+    return
+  }
   uni.navigateTo({
     url: `/pages/create/image?modelId=${item.modelId}&sourceTaskId=${item.taskId}`
   })
@@ -204,6 +235,10 @@ onShow(loadData)
 .filter-row {
   margin-top: 24rpx;
   white-space: nowrap;
+}
+
+.type-row {
+  margin-top: 16rpx;
 }
 
 .filter-pill {

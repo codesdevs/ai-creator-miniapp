@@ -39,6 +39,10 @@
         <text class="info-label">画面比例</text>
         <text class="info-value">{{ task.ratioCode || '-' }}</text>
       </view>
+      <view class="info-row" v-if="task.sizeCode">
+        <text class="info-label">图片大小</text>
+        <text class="info-value">{{ task.sizeCode }}</text>
+      </view>
       <view class="info-row">
         <text class="info-label">风格</text>
         <text class="info-value">{{ task.styleCode || '-' }}</text>
@@ -252,6 +256,12 @@ function createAgain() {
   if (task.value.taskType === 'TEXT') {
     uni.navigateTo({
       url: '/pages/create/text'
+    })
+    return
+  }
+  if (task.value.appId) {
+    uni.navigateTo({
+      url: '/pages/create/image-studio'
     })
     return
   }

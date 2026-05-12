@@ -144,7 +144,6 @@ public class AiTaskServiceImpl implements IAiTaskService
     {
         AiTask query = new AiTask();
         query.setUserId(userId);
-        query.setTaskType("IMAGE");
         return selectAiTaskList(query);
     }
 

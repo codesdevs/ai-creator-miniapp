@@ -1,6 +1,7 @@
 package com.ruoyi.framework.config;
 
 import java.util.concurrent.TimeUnit;
+import com.ruoyi.common.config.AiCreatorProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +31,9 @@ public class ResourcesConfig implements WebMvcConfigurer
     @Autowired
     private AppTokenInterceptor appTokenInterceptor;
 
+    @Autowired
+    private AiCreatorProperties aiCreatorProperties;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry)
     {
@@ -50,14 +54,22 @@ public class ResourcesConfig implements WebMvcConfigurer
     public void addInterceptors(InterceptorRegistry registry)
     {
         registry.addInterceptor(repeatSubmitInterceptor).addPathPatterns("/**");
-        registry.addInterceptor(appTokenInterceptor)
-                .addPathPatterns("/app/**")
-                .excludePathPatterns(
+        String[] excludes = aiCreatorProperties.getDev().isLoginEnabled()
+                ? new String[] {
                         "/app/auth/devLogin",
                         "/app/auth/wxLogin",
                         "/app/model/list",
+                        "/app/application/home",
                         "/app/model/detail/**",
-                        "/app/model/versionList/**");
+                        "/app/model/versionList/**" }
+                : new String[] {
+                        "/app/auth/wxLogin",
+                        "/app/model/list",
+                        "/app/model/detail/**",
+                        "/app/model/versionList/**" };
+        registry.addInterceptor(appTokenInterceptor)
+                .addPathPatterns("/app/**")
+                .excludePathPatterns(excludes);
     }
 
     /**

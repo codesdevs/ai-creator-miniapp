@@ -1,6 +1,7 @@
 <template>
   <scroll-view class="page" scroll-y>
     <view class="hero" v-if="model.modelId">
+      <image v-if="model.iconUrl" class="hero-icon" :src="model.iconUrl" mode="aspectFill" />
       <text class="hero-name">{{ model.modelName }}</text>
       <text class="hero-sub">{{ model.providerName || model.provider || '平台模型' }}</text>
       <text class="hero-desc">{{ model.intro || '围绕当前模型版本推荐合适的创作参数。' }}</text>
@@ -350,8 +351,19 @@ onLoad((options) => {
 }
 
 .hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 30rpx;
   background: linear-gradient(135deg, #182143 0%, #1b1237 100%);
+}
+
+.hero-icon {
+  width: 88rpx;
+  height: 88rpx;
+  margin-bottom: 20rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .hero-name {

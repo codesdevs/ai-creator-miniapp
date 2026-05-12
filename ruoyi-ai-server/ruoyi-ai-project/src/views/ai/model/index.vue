@@ -60,9 +60,19 @@
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="模型" align="center" min-width="220">
         <template #default="scope">
-          <div class="summary-cell">
-            <div class="summary-main">{{ scope.row.modelName || "-" }}</div>
-            <div class="summary-sub">{{ scope.row.modelCode || "-" }} / ID {{ scope.row.modelId || "-" }}</div>
+          <div class="summary-row">
+            <el-image
+              v-if="scope.row.iconUrl"
+              :src="scope.row.iconUrl"
+              class="model-icon"
+              fit="cover"
+              :preview-src-list="[scope.row.iconUrl]"
+              preview-teleported
+            />
+            <div class="summary-cell">
+              <div class="summary-main">{{ scope.row.modelName || "-" }}</div>
+              <div class="summary-sub">{{ scope.row.modelCode || "-" }} / ID {{ scope.row.modelId || "-" }}</div>
+            </div>
           </div>
         </template>
       </el-table-column>
@@ -153,6 +163,11 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="模型图标" prop="iconUrl">
+              <image-upload v-model="form.iconUrl" :limit="1" :file-size="3" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="状态" prop="status">
               <el-radio-group v-model="form.status">
                 <el-radio value="0">正常</el-radio>
@@ -161,8 +176,23 @@
             </el-form-item>
           </el-col>
           <el-col :span="24">
+            <el-form-item label="图标预设">
+              <div class="icon-preset-list">
+                <div
+                  v-for="item in iconPresetOptions"
+                  :key="item.value"
+                  :class="['icon-preset-item', form.iconUrl === item.value ? 'active' : '']"
+                  @click="form.iconUrl = item.value"
+                >
+                  <el-image :src="item.value" fit="cover" />
+                  <span>{{ item.label }}</span>
+                </div>
+              </div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
             <el-form-item label="封面地址" prop="coverUrl">
-              <el-input v-model="form.coverUrl" placeholder="请输入封面地址" />
+              <image-upload v-model="form.coverUrl" :limit="1" :file-size="5" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -442,6 +472,18 @@ const relationDialogTitle = ref("")
 const ratioPresetOptions = ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"]
 const stylePresetOptions = ["PHOTO", "REALISTIC", "ANIME", "ILLUSTRATION", "3D", "WATERCOLOR", "CUSTOM"]
 const modePresetOptions = ["TEXT_TO_IMAGE", "IMAGE_TO_IMAGE", "UPSCALE", "INPAINT"]
+const iconPresetOptions = [
+  { label: "即梦AI", value: "/static/images/application/index/tpcz/jmai.png" },
+  { label: "可灵AI", value: "/static/images/application/index/tpcz/klai.png" },
+  { label: "Seedream", value: "/static/images/application/index/tpcz/seedream.png" },
+  { label: "Nano Banana", value: "/static/images/application/index/tpcz/banana.png" },
+  { label: "GPT Image", value: "/static/images/application/index/tpcz/gpt-image-2.png" },
+  { label: "Midjourney", value: "/static/images/application/index/tpcz/midjourney.png" },
+  { label: "Luma", value: "/static/images/application/index/tpcz/luma.png" },
+  { label: "Sora 2", value: "/static/images/application/index/tpcz/sora2.png" },
+  { label: "通义万相", value: "/static/images/application/index/tpcz/tywx.png" },
+  { label: "智谱", value: "/static/images/application/index/tpcz/zp.png" }
+]
 
 const data = reactive({
   form: {},
@@ -558,6 +600,7 @@ function reset() {
     provider: undefined,
     officialProviderId: undefined,
     capabilities: undefined,
+    iconUrl: undefined,
     coverUrl: undefined,
     intro: undefined,
     sort: 0,
@@ -779,6 +822,20 @@ getChannelOptions()
   line-height: 1.4;
 }
 
+.summary-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.model-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 10px;
+  background: #f3f4f6;
+}
+
 .summary-main {
   color: #111827;
   font-weight: 500;
@@ -814,5 +871,44 @@ getChannelOptions()
   color: #6b7280;
   font-size: 12px;
   line-height: 1.6;
+}
+
+.icon-preset-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.icon-preset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-preset-item:hover,
+.icon-preset-item.active {
+  border-color: #409eff;
+  background: #ecf5ff;
+}
+
+.icon-preset-item :deep(.el-image) {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.icon-preset-item span {
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
 }
 </style>

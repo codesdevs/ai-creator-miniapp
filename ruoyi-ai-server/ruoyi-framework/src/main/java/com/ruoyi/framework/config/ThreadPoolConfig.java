@@ -42,6 +42,19 @@ public class ThreadPoolConfig
         return executor;
     }
 
+    @Bean(name = "aiTaskExecutor")
+    public ThreadPoolTaskExecutor aiTaskExecutor()
+    {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(8);
+        executor.setMaxPoolSize(32);
+        executor.setQueueCapacity(500);
+        executor.setKeepAliveSeconds(120);
+        executor.setThreadNamePrefix("ai-task-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        return executor;
+    }
+
     /**
      * 执行周期性或定时任务
      */

@@ -9,6 +9,30 @@
 	<a href="https://gitee.com/y_project/RuoYi-Vue/blob/master/LICENSE"><img src="https://img.shields.io/github/license/mashape/apistatus.svg"></a>
 </p>
 
+## AI Creator 本地配置
+
+项目已将敏感配置和开发态能力改为环境变量驱动，默认关闭开发登录、模拟支付和模拟任务。
+
+后端常用变量：
+
+| 变量 | 说明 | 默认值 |
+| :--- | :--- | :--- |
+| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | MySQL 连接配置 | 本地库、`root`、空密码 |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_DATABASE` / `REDIS_PASSWORD` | Redis 连接配置 | `localhost:6379/0`、空密码 |
+| `TOKEN_SECRET` | JWT 密钥 | `please-change-ai-creator-token-secret` |
+| `WX_MINIAPP_ENABLED` / `WX_MINIAPP_APP_ID` / `WX_MINIAPP_SECRET` | 微信小程序登录配置 | 关闭、空 |
+| `AI_CREATOR_DEV_LOGIN_ENABLED` | 是否启用 `/app/auth/devLogin` | `false` |
+| `AI_CREATOR_MOCK_PAY_ENABLED` | 是否启用小程序模拟支付 | `false` |
+| `AI_CREATOR_MOCK_TASK_ENABLED` | 是否允许无渠道模型走本地模拟任务 | `false` |
+
+小程序端使用 Vite 环境变量：
+
+| 变量 | 说明 | 默认值 |
+| :--- | :--- | :--- |
+| `VITE_API_BASE_URL` | 后端 API 地址 | `http://127.0.0.1:9901` |
+| `VITE_ENABLE_DEV_LOGIN` | 是否展示/使用开发态登录兜底 | `false` |
+| `VITE_ENABLE_MOCK_PAY` | 是否展示/使用模拟支付按钮 | `false` |
+
 ## 平台简介
 
 若依是一套全部开源的快速开发平台，毫无保留给个人及企业免费使用。

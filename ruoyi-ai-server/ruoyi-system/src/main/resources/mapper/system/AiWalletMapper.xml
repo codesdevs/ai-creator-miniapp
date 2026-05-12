@@ -36,4 +36,29 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             update_time = sysdate()
         where wallet_id = #{walletId}
     </update>
+
+    <update id="consumePower">
+        update ai_c_wallet
+        set balance_power = balance_power - #{powerNum},
+            total_consume_power = total_consume_power + #{powerNum},
+            update_time = sysdate()
+        where user_id = #{userId}
+          and balance_power >= #{powerNum}
+    </update>
+
+    <update id="grantPower">
+        update ai_c_wallet
+        set balance_power = balance_power + #{powerNum},
+            total_give_power = total_give_power + #{powerNum},
+            update_time = sysdate()
+        where user_id = #{userId}
+    </update>
+
+    <update id="rechargePower">
+        update ai_c_wallet
+        set balance_power = balance_power + #{powerNum},
+            total_recharge_power = total_recharge_power + #{powerNum},
+            update_time = sysdate()
+        where user_id = #{userId}
+    </update>
 </mapper>

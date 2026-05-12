@@ -60,6 +60,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { devLogin } from '@/api/auth'
+import { ENABLE_DEV_LOGIN } from '@/config'
 import { isLoggedIn, redirectAfterLogin, setToken, setUser } from '@/utils/auth'
 
 const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
@@ -90,6 +91,10 @@ function goPassword() {
 }
 
 function mockSendCode() {
+  if (!ENABLE_DEV_LOGIN) {
+    uni.showToast({ title: '短信登录暂未开放', icon: 'none' })
+    return
+  }
   if (!form.value.mobile.trim()) {
     uni.showToast({ title: '请先输入手机号', icon: 'none' })
     return
@@ -98,6 +103,10 @@ function mockSendCode() {
 }
 
 async function handleLogin() {
+  if (!ENABLE_DEV_LOGIN) {
+    uni.showToast({ title: '短信登录暂未开放', icon: 'none' })
+    return
+  }
   if (!checked.value) {
     uni.showToast({ title: '请先勾选协议', icon: 'none' })
     return

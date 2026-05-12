@@ -50,6 +50,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { devLogin, wxLogin } from '@/api/auth'
+import { ENABLE_DEV_LOGIN } from '@/config'
 import { getDevVisitorKey, isLoggedIn, redirectAfterLogin, setToken, setUser } from '@/utils/auth'
 
 const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
@@ -122,6 +123,9 @@ function getWxCode() {
 }
 
 async function tryDevFallback() {
+  if (!ENABLE_DEV_LOGIN) {
+    throw new Error('微信登录暂不可用')
+  }
   const devKey = getDevVisitorKey()
   const res = await devLogin({
     devKey: `wx:${devKey}`,

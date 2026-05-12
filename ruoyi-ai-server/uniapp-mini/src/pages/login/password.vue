@@ -56,6 +56,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { devLogin } from '@/api/auth'
+import { ENABLE_DEV_LOGIN } from '@/config'
 import { isLoggedIn, redirectAfterLogin, setToken, setUser } from '@/utils/auth'
 
 const INVITE_CODE_KEY = 'AI_CREATOR_INVITE_CODE'
@@ -90,6 +91,10 @@ function showForgetTip() {
 }
 
 async function handleLogin() {
+  if (!ENABLE_DEV_LOGIN) {
+    uni.showToast({ title: '账号密码登录暂未开放', icon: 'none' })
+    return
+  }
   if (!checked.value) {
     uni.showToast({ title: '请先勾选协议', icon: 'none' })
     return

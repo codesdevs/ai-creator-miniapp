@@ -3,6 +3,7 @@ package com.ruoyi.system.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.ruoyi.common.config.AiCreatorProperties;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
@@ -40,10 +41,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
@@ -103,10 +101,13 @@ public class AiTaskServiceImpl implements IAiTaskService
     private AiWalletFlowMapper aiWalletFlowMapper;
 
     @Autowired
-    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+    private AiTaskExecutionDispatcher aiTaskExecutionDispatcher;
 
     @Autowired
     private RedisCache redisCache;
+
+    @Autowired
+    private AiCreatorProperties aiCreatorProperties;
 
     @Override
     public AiTask selectAiTaskById(Long taskId)
@@ -207,6 +208,10 @@ public class AiTaskServiceImpl implements IAiTaskService
             task.setStyleCode(bo.getStyleCode());
             task.setRatioCode(bo.getRatioCode());
             task.setSourceUrl(bo.getSourceUrl());
+            if (route == null && !aiCreatorProperties.getTask().isMockEnabled())
+            {
+                throw new ServiceException("当前模型版本未配置可用渠道");
+            }
             task.setStatus(route == null ? "PENDING" : "WAITING");
             task.setPowerCost(version.getPowerCost());
             if (route != null)
@@ -290,24 +295,18 @@ public class AiTaskServiceImpl implements IAiTaskService
 
     private void dispatchRealImageTask(Long taskId, Long modelId, Long versionId, Long relationId)
     {
-        Runnable taskRunner = () -> threadPoolTaskExecutor.execute(() -> executeRealImageTask(taskId, modelId, versionId, relationId));
-        if (TransactionSynchronizationManager.isSynchronizationActive())
+        aiTaskExecutionDispatcher.dispatch(taskId, modelId, versionId, relationId,
+            () -> executeRealImageTask(taskId, modelId, versionId, relationId),
+            () -> handleDispatchRejected(taskId));
+    }
+
+    private void handleDispatchRejected(Long taskId)
+    {
+        AiTask task = aiTaskMapper.selectAiTaskById(taskId);
+        if (task != null)
         {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization()
-            {
-                @Override
-                public void afterCommit()
-                {
-                    log.info("AI image task dispatch after commit, taskId={}, modelId={}, versionId={}, relationId={}",
-                        taskId, modelId, versionId, relationId);
-                    taskRunner.run();
-                }
-            });
-            return;
+            handleAsyncTaskFailure(task, new ServiceException("任务执行队列繁忙，请稍后重试"));
         }
-        log.info("AI image task dispatch immediately, taskId={}, modelId={}, versionId={}, relationId={}",
-            taskId, modelId, versionId, relationId);
-        taskRunner.run();
     }
 
     private AiChannelModelRelation resolveChannelModelRelation(Long versionId)
@@ -856,6 +855,10 @@ public class AiTaskServiceImpl implements IAiTaskService
     private AiTask hydrateMockTask(AiTask task)
     {
         if (task == null || task.getSubmitTime() == null)
+        {
+            return task;
+        }
+        if (!aiCreatorProperties.getTask().isMockEnabled())
         {
             return task;
         }

@@ -1,6 +1,8 @@
 package com.ruoyi.web.controller.app;
 
+import com.ruoyi.common.config.AiCreatorProperties;
 import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.system.domain.AiAppUser;
 import com.ruoyi.system.domain.vo.AppDevLoginBo;
 import com.ruoyi.system.domain.vo.AppWxLoginBo;
@@ -31,9 +33,16 @@ public class AppAuthController
     @Autowired
     private AppTokenService appTokenService;
 
+    @Autowired
+    private AiCreatorProperties aiCreatorProperties;
+
     @PostMapping("/devLogin")
     public AjaxResult devLogin(@Valid @RequestBody AppDevLoginBo bo)
     {
+        if (!aiCreatorProperties.getDev().isLoginEnabled())
+        {
+            throw new ServiceException("开发登录未启用");
+        }
         AiAppUser user = aiAppUserService.devLogin(bo);
         return buildLoginResult(user);
     }

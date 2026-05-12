@@ -8,7 +8,7 @@
         </view>
         <view class="hero-badge">Wallet</view>
       </view>
-      <text class="hero-desc">创作任务会消耗算力，失败任务在开发态会自动退回。</text>
+          <text class="hero-desc">创作任务会消耗算力，失败任务会按任务规则退回。</text>
     </view>
 
     <view class="stats-grid">
@@ -34,9 +34,9 @@
       <view class="action-head">
         <view>
           <text class="action-title">充值套餐</text>
-          <text class="action-desc">开发态支持在小程序内直接完成模拟支付，用于联调充值到账链路。</text>
+          <text class="action-desc">选择套餐并创建订单，按支付渠道完成充值到账。</text>
         </view>
-        <text class="action-badge">DEV</text>
+        <text class="action-badge">PAY</text>
       </view>
 
       <view v-if="packageLoading" class="state">套餐加载中...</view>
@@ -129,7 +129,7 @@
           </view>
           <view class="order-actions">
             <text class="order-link">查看详情</text>
-            <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link primary" @tap.stop="handleMockPay(item.orderId)">立即支付</text>
+            <text v-if="ENABLE_MOCK_PAY && item.orderStatus === 'WAIT_PAY'" class="order-link primary" @tap.stop="handleMockPay(item.orderId)">立即支付</text>
             <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link warn" @tap.stop="showPayGuide(item.orderId)">支付指引</text>
             <text v-if="item.orderStatus === 'WAIT_PAY'" class="order-link danger" @tap.stop="handleCancelOrder(item.orderId)">取消订单</text>
           </view>
@@ -227,7 +227,7 @@
           </view>
         </view>
         <view v-if="orderDetail.orderStatus === 'WAIT_PAY'" class="popup-actions">
-          <button class="popup-btn primary" @tap="handleMockPay(orderDetail.orderId)">立即支付</button>
+          <button v-if="ENABLE_MOCK_PAY" class="popup-btn primary" @tap="handleMockPay(orderDetail.orderId)">立即支付</button>
           <button class="popup-btn secondary" @tap="showPayGuide(orderDetail.orderId)">支付指引</button>
           <button class="popup-btn danger" @tap="handleCancelOrder(orderDetail.orderId)">取消订单</button>
         </view>
@@ -241,6 +241,7 @@ import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { redeemCardCode } from '@/api/cardCode'
 import { cancelRechargeOrder, getMyRechargeOrderList, getPayConfigList, getRechargeOrderDetail, getRechargePackageList, mockPayRechargeOrder, submitRechargeOrder } from '@/api/order'
+import { ENABLE_MOCK_PAY } from '@/config'
 import { getWalletFlows, getWalletInfo } from '@/api/wallet'
 import { requireLogin } from '@/utils/auth'
 
@@ -355,10 +356,10 @@ function closeOrderDetail() {
 async function showPayGuide(orderId) {
   try {
     const res = await fetchOrderDetail(orderId)
-    const detail = res.data || {}
-    uni.showModal({
-      title: '支付指引',
-      content: `${res.payTip || '当前为开发阶段，可直接在小程序内完成模拟支付。'}\n订单号：${detail.orderNo || '-'}\n金额：¥${detail.payAmount || 0}`,
+      const detail = res.data || {}
+      uni.showModal({
+        title: '支付指引',
+      content: `${res.payTip || '订单已创建，请按当前支付渠道完成支付。'}\n订单号：${detail.orderNo || '-'}\n金额：¥${detail.payAmount || 0}`,
       showCancel: false
     })
   } catch (error) {
@@ -370,6 +371,13 @@ async function showPayGuide(orderId) {
 }
 
 async function handleMockPay(orderId) {
+  if (!ENABLE_MOCK_PAY) {
+    uni.showToast({
+      title: '模拟支付未启用',
+      icon: 'none'
+    })
+    return
+  }
   uni.showModal({
     title: '确认支付',
     content: '当前为开发态模拟支付，确认后将直接给当前账号充值到账。',

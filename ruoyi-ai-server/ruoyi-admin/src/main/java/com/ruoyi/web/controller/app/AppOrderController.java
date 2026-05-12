@@ -1,5 +1,6 @@
 package com.ruoyi.web.controller.app;
 
+import com.ruoyi.common.config.AiCreatorProperties;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.framework.web.service.AppSecurityUtils;
 import com.ruoyi.system.domain.AiOrder;
@@ -36,6 +37,9 @@ public class AppOrderController
     @Autowired
     private IAiPayConfigService aiPayConfigService;
 
+    @Autowired
+    private AiCreatorProperties aiCreatorProperties;
+
     @GetMapping("/packageList")
     public AjaxResult packageList()
     {
@@ -56,7 +60,7 @@ public class AppOrderController
         AiOrder order = aiOrderService.createRechargeOrder(AppSecurityUtils.getUserId(), bo.getPackageId(), bo.getPayConfigId());
         AjaxResult result = AjaxResult.success("充值订单创建成功");
         result.put("order", order);
-        result.put("payTip", "当前为开发阶段，可在小程序订单详情中直接完成模拟支付到账");
+        result.put("payTip", buildPayTip());
         return result;
     }
 
@@ -73,7 +77,7 @@ public class AppOrderController
         AjaxResult result = AjaxResult.success(order);
         if ("WAIT_PAY".equals(order.getOrderStatus()))
         {
-            result.put("payTip", "当前为开发阶段，可在当前订单详情中直接完成模拟支付到账");
+            result.put("payTip", buildPayTip());
         }
         return result;
     }
@@ -91,5 +95,14 @@ public class AppOrderController
     public AjaxResult cancelRecharge(@PathVariable Long orderId)
     {
         return AjaxResult.success(aiOrderService.cancelUserOrder(AppSecurityUtils.getUserId(), orderId));
+    }
+
+    private String buildPayTip()
+    {
+        if (aiCreatorProperties.getPayment().isMockEnabled())
+        {
+            return "当前已启用开发态模拟支付，可在订单详情中直接完成到账";
+        }
+        return "订单已创建，请按当前支付渠道完成支付";
     }
 }

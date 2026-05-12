@@ -74,6 +74,7 @@ create table if not exists ai_c_model (
     provider        varchar(32)     default '' comment '服务商',
     official_provider_id bigint      default null comment '官方提供商ID',
     capabilities    text            comment '能力标签JSON',
+    icon_url        varchar(255)    default '' comment '模型图标',
     cover_url       varchar(255)    default '' comment '封面地址',
     intro           varchar(255)    default '' comment '模型简介',
     status          char(1)         default '0' comment '状态（0正常 1停用）',
@@ -343,6 +344,13 @@ set @sql = (
 prepare stmt from @sql; execute stmt; deallocate prepare stmt;
 
 set @sql = (
+    select if(count(*) = 0, 'alter table ai_c_model add column icon_url varchar(255) default '''' comment ''模型图标'' after capabilities', 'select 1')
+    from information_schema.columns
+    where table_schema = database() and table_name = 'ai_c_model' and column_name = 'icon_url'
+);
+prepare stmt from @sql; execute stmt; deallocate prepare stmt;
+
+set @sql = (
     select if(count(*) = 0, 'alter table ai_c_model_version add column api_model_name varchar(128) default '''' comment ''实际请求模型名''', 'select 1')
     from information_schema.columns
     where table_schema = database() and table_name = 'ai_c_model_version' and column_name = 'api_model_name'
@@ -595,12 +603,12 @@ left join ai_c_provider p on p.provider_code = m.provider
 set m.official_provider_id = p.provider_id
 where m.official_provider_id is null and m.provider is not null and m.provider <> '';
 
-insert into ai_c_model (model_id, model_code, model_name, model_type, provider, intro, status, sort, create_by)
+insert into ai_c_model (model_id, model_code, model_name, model_type, provider, icon_url, intro, status, sort, create_by)
 values
-    (1, 'jimeng', '即梦AI', 'IMAGE', 'BYTEDANCE', '字节跳动图片模型', '0', 1, 'admin'),
-    (2, 'tongyi-wanxiang', '通义万象', 'IMAGE', 'ALIBABA', '阿里通义AI大模型', '0', 2, 'admin'),
-    (3, 'keling', '可灵AI', 'VIDEO', 'KUAISHOU', '快手视频大模型', '0', 3, 'admin')
-on duplicate key update model_name = values(model_name), provider = values(provider), intro = values(intro);
+    (1, 'jimeng', '即梦AI', 'IMAGE', 'BYTEDANCE', '/static/images/application/index/tpcz/jmai.png', '字节跳动图片模型', '0', 1, 'admin'),
+    (2, 'tongyi-wanxiang', '通义万象', 'IMAGE', 'ALIBABA', '/static/images/application/index/tpcz/tywx.png', '阿里通义AI大模型', '0', 2, 'admin'),
+    (3, 'keling', '可灵AI', 'VIDEO', 'KUAISHOU', '/static/images/application/index/tpcz/klai.png', '快手视频大模型', '0', 3, 'admin')
+on duplicate key update model_name = values(model_name), provider = values(provider), icon_url = values(icon_url), intro = values(intro);
 
 insert into ai_c_model_version
     (version_id, model_id, version_code, version_name, power_cost, support_ratio, support_style, support_mode, status, create_by)
@@ -613,11 +621,51 @@ values
 on duplicate key update version_name = values(version_name), power_cost = values(power_cost), status = values(status);
 
 insert into ai_c_model
-    (model_id, model_code, model_name, model_type, provider, official_provider_id, capabilities, intro, status, sort, create_by)
+    (model_id, model_code, model_name, model_type, provider, official_provider_id, capabilities, icon_url, intro, status, sort, create_by)
 values
-    (10, 'glm-image', '智谱文生图', 'IMAGE', 'ZHIPU', 6, '["text_to_image"]', '智谱官方文生图模型', '0', 10, 'admin')
+    (10, 'glm-image', '智谱文生图', 'IMAGE', 'ZHIPU', 6, '["text_to_image"]', '/static/images/application/index/tpcz/zp.png', '智谱官方文生图模型', '0', 10, 'admin')
 on duplicate key update model_name = values(model_name), provider = values(provider), official_provider_id = values(official_provider_id),
-    capabilities = values(capabilities), intro = values(intro), status = values(status), sort = values(sort);
+    capabilities = values(capabilities), icon_url = values(icon_url), intro = values(intro), status = values(status), sort = values(sort);
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/jmai.png'
+where (icon_url is null or icon_url = '') and lower(model_code) like '%jimeng%';
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/tywx.png'
+where (icon_url is null or icon_url = '') and (lower(model_code) like '%tongyi-wanxiang%' or lower(model_code) like '%wanxiang%' or lower(model_code) like '%tywx%');
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/klai.png'
+where (icon_url is null or icon_url = '') and lower(model_code) like '%keling%';
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/seedream.png'
+where (icon_url is null or icon_url = '') and lower(model_code) like '%seedream%';
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/banana.png'
+where (icon_url is null or icon_url = '') and lower(model_code) like '%banana%';
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/gpt-image-2.png'
+where (icon_url is null or icon_url = '') and (lower(model_code) like '%gpt-image-2%' or lower(model_code) like '%gpt-image%');
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/midjourney.png'
+where (icon_url is null or icon_url = '') and lower(model_code) like '%midjourney%';
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/luma.png'
+where (icon_url is null or icon_url = '') and lower(model_code) like '%luma%';
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/sora2.png'
+where (icon_url is null or icon_url = '') and (lower(model_code) like '%sora2%' or lower(model_code) like '%sora%');
+
+update ai_c_model
+set icon_url = '/static/images/application/index/tpcz/zp.png'
+where (icon_url is null or icon_url = '') and (lower(model_code) like '%glm-image%' or lower(model_code) like '%zhipu%');
 
 insert into ai_c_provider_channel
     (channel_id, provider_id, channel_name, channel_code, base_url, api_key, api_secret, proxy_enabled, priority, weight, timeout_ms, max_concurrency, rpm_limit, tpm_limit, is_fallback, health_status, status, remark, create_by, create_time)

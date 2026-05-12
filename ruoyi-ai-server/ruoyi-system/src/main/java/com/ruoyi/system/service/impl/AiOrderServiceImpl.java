@@ -1,5 +1,6 @@
 package com.ruoyi.system.service.impl;
 
+import com.ruoyi.common.config.AiCreatorProperties;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -32,6 +33,9 @@ public class AiOrderServiceImpl implements IAiOrderService
 
     @Autowired
     private IAiPayConfigService aiPayConfigService;
+
+    @Autowired
+    private AiCreatorProperties aiCreatorProperties;
 
     @Override
     public AiOrder selectAiOrderById(Long orderId)
@@ -205,6 +209,10 @@ public class AiOrderServiceImpl implements IAiOrderService
 
     private boolean isMockPayEnabled(AiPayConfig payConfig)
     {
+        if (!aiCreatorProperties.getPayment().isMockEnabled())
+        {
+            return false;
+        }
         if (payConfig == null || !StringUtils.equals("0", payConfig.getStatus()))
         {
             return false;

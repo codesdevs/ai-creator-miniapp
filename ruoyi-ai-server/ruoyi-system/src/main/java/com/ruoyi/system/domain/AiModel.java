@@ -40,6 +40,9 @@ public class AiModel extends BaseEntity
     /** 能力标签 */
     private String capabilities;
 
+    /** 模型图标 */
+    private String iconUrl;
+
     /** 封面地址 */
     private String coverUrl;
 
@@ -142,6 +145,17 @@ public class AiModel extends BaseEntity
         this.capabilities = capabilities;
     }
 
+    @Size(min = 0, max = 255, message = "模型图标长度不能超过255个字符")
+    public String getIconUrl()
+    {
+        return iconUrl;
+    }
+
+    public void setIconUrl(String iconUrl)
+    {
+        this.iconUrl = iconUrl;
+    }
+
     @Size(min = 0, max = 255, message = "封面地址长度不能超过255个字符")
     public String getCoverUrl()
     {
@@ -197,6 +211,7 @@ public class AiModel extends BaseEntity
             .append("officialProviderId", getOfficialProviderId())
             .append("providerName", getProviderName())
             .append("capabilities", getCapabilities())
+            .append("iconUrl", getIconUrl())
             .append("coverUrl", getCoverUrl())
             .append("intro", getIntro())
             .append("status", getStatus())

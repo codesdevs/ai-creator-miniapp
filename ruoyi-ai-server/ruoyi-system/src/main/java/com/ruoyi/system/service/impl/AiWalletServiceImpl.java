@@ -8,6 +8,7 @@ import com.ruoyi.system.mapper.AiWalletMapper;
 import com.ruoyi.system.service.IAiWalletService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +41,14 @@ public class AiWalletServiceImpl implements IAiWalletService
         wallet.setTotalRechargePower(0);
         wallet.setTotalConsumePower(0);
         wallet.setTotalGivePower(0);
-        aiWalletMapper.insertAiWallet(wallet);
+        try
+        {
+            aiWalletMapper.insertAiWallet(wallet);
+        }
+        catch (DuplicateKeyException ex)
+        {
+            // 并发创建同一用户钱包时，复用已创建记录。
+        }
         return aiWalletMapper.selectAiWalletByUserId(userId);
     }
 
@@ -64,17 +72,15 @@ public class AiWalletServiceImpl implements IAiWalletService
         {
             return;
         }
-        AiWallet wallet = getOrCreateWallet(userId);
-        int beforeBalance = wallet.getBalancePower() == null ? 0 : wallet.getBalancePower();
-        if (beforeBalance < powerNum)
+        getOrCreateWallet(userId);
+        int rows = aiWalletMapper.consumePower(userId, powerNum);
+        if (rows <= 0)
         {
             throw new ServiceException("算力不足，请先充值");
         }
-        int afterBalance = beforeBalance - powerNum;
-        wallet.setBalancePower(afterBalance);
-        wallet.setTotalConsumePower((wallet.getTotalConsumePower() == null ? 0 : wallet.getTotalConsumePower()) + powerNum);
-        aiWalletMapper.updateAiWallet(wallet);
-        insertFlow(userId, bizType, bizId, "CONSUME", powerNum, beforeBalance, afterBalance, remark);
+        AiWallet wallet = aiWalletMapper.selectAiWalletByUserId(userId);
+        int afterBalance = wallet.getBalancePower() == null ? 0 : wallet.getBalancePower();
+        insertFlow(userId, bizType, bizId, "CONSUME", powerNum, afterBalance + powerNum, afterBalance, remark);
     }
 
     @Override
@@ -85,13 +91,15 @@ public class AiWalletServiceImpl implements IAiWalletService
         {
             throw new ServiceException("赠送算力必须大于0");
         }
-        AiWallet wallet = getOrCreateWallet(userId);
-        int beforeBalance = wallet.getBalancePower() == null ? 0 : wallet.getBalancePower();
-        int afterBalance = beforeBalance + powerNum;
-        wallet.setBalancePower(afterBalance);
-        wallet.setTotalGivePower((wallet.getTotalGivePower() == null ? 0 : wallet.getTotalGivePower()) + powerNum);
-        aiWalletMapper.updateAiWallet(wallet);
-        insertFlow(userId, bizType, bizId, "GRANT", powerNum, beforeBalance, afterBalance, remark);
+        getOrCreateWallet(userId);
+        int rows = aiWalletMapper.grantPower(userId, powerNum);
+        if (rows <= 0)
+        {
+            throw new ServiceException("钱包不存在");
+        }
+        AiWallet wallet = aiWalletMapper.selectAiWalletByUserId(userId);
+        int afterBalance = wallet.getBalancePower() == null ? 0 : wallet.getBalancePower();
+        insertFlow(userId, bizType, bizId, "GRANT", powerNum, afterBalance - powerNum, afterBalance, remark);
     }
 
     @Override
@@ -102,13 +110,15 @@ public class AiWalletServiceImpl implements IAiWalletService
         {
             throw new ServiceException("充值算力必须大于0");
         }
-        AiWallet wallet = getOrCreateWallet(userId);
-        int beforeBalance = wallet.getBalancePower() == null ? 0 : wallet.getBalancePower();
-        int afterBalance = beforeBalance + powerNum;
-        wallet.setBalancePower(afterBalance);
-        wallet.setTotalRechargePower((wallet.getTotalRechargePower() == null ? 0 : wallet.getTotalRechargePower()) + powerNum);
-        aiWalletMapper.updateAiWallet(wallet);
-        insertFlow(userId, bizType, bizId, "GRANT", powerNum, beforeBalance, afterBalance, remark);
+        getOrCreateWallet(userId);
+        int rows = aiWalletMapper.rechargePower(userId, powerNum);
+        if (rows <= 0)
+        {
+            throw new ServiceException("钱包不存在");
+        }
+        AiWallet wallet = aiWalletMapper.selectAiWalletByUserId(userId);
+        int afterBalance = wallet.getBalancePower() == null ? 0 : wallet.getBalancePower();
+        insertFlow(userId, bizType, bizId, "GRANT", powerNum, afterBalance - powerNum, afterBalance, remark);
     }
 
     private void insertFlow(Long userId, String bizType, Long bizId, String changeType, Integer powerNum,

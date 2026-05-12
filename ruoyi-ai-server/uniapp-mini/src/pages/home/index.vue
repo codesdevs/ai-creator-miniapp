@@ -38,7 +38,10 @@
           @tap="goModel(item)"
         >
           <view class="featured-head">
-            <text class="featured-type">{{ item.modelType === 'VIDEO' ? '视频模型' : '图片模型' }}</text>
+            <view class="featured-meta">
+              <image v-if="item.iconUrl" class="featured-icon" :src="item.iconUrl" mode="aspectFill" />
+              <text class="featured-type">{{ item.modelType === 'VIDEO' ? '视频模型' : '图片模型' }}</text>
+            </view>
             <text class="featured-action">进入创作 ›</text>
           </view>
           <text class="featured-name">{{ item.modelName }}</text>
@@ -415,6 +418,21 @@ onShow(() => {
   align-items: center;
   justify-content: space-between;
   gap: 16rpx;
+}
+
+.featured-meta {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  min-width: 0;
+}
+
+.featured-icon {
+  width: 52rpx;
+  height: 52rpx;
+  flex: 0 0 52rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .featured-type {

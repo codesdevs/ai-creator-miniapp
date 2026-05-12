@@ -77,11 +77,30 @@
     </el-row>
 
     <el-table v-loading="loading" :data="taskList">
-      <el-table-column label="任务ID" align="center" prop="taskId" width="90" />
-      <el-table-column label="会员昵称" align="center" prop="nickName" min-width="120" show-overflow-tooltip />
-      <el-table-column label="任务编号" align="center" prop="taskNo" min-width="180" />
-      <el-table-column label="模型名称" align="center" prop="modelName" min-width="120" />
-      <el-table-column label="版本名称" align="center" prop="versionName" min-width="120" />
+      <el-table-column label="会员" align="center" min-width="180">
+        <template #default="scope">
+          <div class="summary-cell">
+            <div class="summary-main">{{ scope.row.nickName || "-" }}</div>
+            <div class="summary-sub">ID: {{ scope.row.userId || "-" }}</div>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="任务" align="center" min-width="220" show-overflow-tooltip>
+        <template #default="scope">
+          <div class="summary-cell">
+            <div class="summary-main">{{ scope.row.taskNo || "-" }}</div>
+            <div class="summary-sub">任务ID: {{ scope.row.taskId || "-" }}</div>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="模型版本" align="center" min-width="180" show-overflow-tooltip>
+        <template #default="scope">
+          <div class="summary-cell">
+            <div class="summary-main">{{ scope.row.modelName || "-" }}</div>
+            <div class="summary-sub">{{ scope.row.versionName || "-" }}</div>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column label="任务状态" align="center" prop="status" width="100">
         <template #default="scope">
           <el-tag :type="statusTagType(scope.row.status)">{{ scope.row.status }}</el-tag>
@@ -104,7 +123,7 @@
       @pagination="getList"
     />
 
-    <el-dialog v-model="open" width="900px" append-to-body @closed="stopDetailAutoRefresh">
+    <el-dialog v-model="open" width="980px" append-to-body @closed="stopDetailAutoRefresh">
       <template #header>
         <div class="detail-header">
           <span>任务详情</span>
@@ -115,16 +134,31 @@
         </div>
       </template>
       <template v-if="detail.task">
+        <div class="detail-overview">
+          <div class="overview-card">
+            <div class="overview-label">任务状态</div>
+            <el-tag :type="statusTagType(detail.task.status)">{{ detail.task.status }}</el-tag>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">会员</div>
+            <div class="overview-value">{{ detail.task.nickName || "-" }}</div>
+            <div class="overview-sub">ID: {{ detail.task.userId || "-" }}</div>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">模型版本</div>
+            <div class="overview-value">{{ detail.task.modelName || "-" }}</div>
+            <div class="overview-sub">{{ detail.task.versionName || "-" }}</div>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">退款状态</div>
+            <div class="overview-value">{{ detail.task.status === "FAIL" ? (detail.refunded ? "已退款" : "未退款") : "-" }}</div>
+          </div>
+        </div>
+
         <el-divider content-position="left">基础信息</el-divider>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="任务ID">{{ detail.task.taskId || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="任务编号">{{ detail.task.taskNo }}</el-descriptions-item>
-          <el-descriptions-item label="任务状态">
-            <el-tag :type="statusTagType(detail.task.status)">{{ detail.task.status }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="失败退款">{{ detail.task.status === 'FAIL' ? (detail.refunded ? '已退款' : '未退款') : '-' }}</el-descriptions-item>
-          <el-descriptions-item label="会员ID">{{ detail.task.userId || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="会员昵称">{{ detail.task.nickName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="任务编号">{{ detail.task.taskNo || "-" }}</el-descriptions-item>
           <el-descriptions-item label="模型名称">{{ detail.task.modelName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="版本名称">{{ detail.task.versionName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ detail.task.submitTime || '-' }}</el-descriptions-item>
@@ -140,9 +174,16 @@
           <el-descriptions-item label="风格编码">{{ detail.task.styleCode || '-' }}</el-descriptions-item>
           <el-descriptions-item label="比例编码">{{ detail.task.ratioCode || '-' }}</el-descriptions-item>
           <el-descriptions-item label="消耗算力">{{ detail.task.powerCost || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="原图地址">{{ detail.task.sourceUrl || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="提示词" :span="2">{{ detail.task.promptText || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="反向提示词" :span="2">{{ detail.task.negativePrompt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="原图地址">
+            <a v-if="detail.task.sourceUrl" :href="detail.task.sourceUrl" target="_blank" rel="noopener noreferrer">查看原图</a>
+            <span v-else>-</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="提示词" :span="2">
+            <div class="text-block">{{ detail.task.promptText || "-" }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="反向提示词" :span="2">
+            <div class="text-block">{{ detail.task.negativePrompt || "-" }}</div>
+          </el-descriptions-item>
         </el-descriptions>
 
         <el-divider content-position="left">执行链路</el-divider>
@@ -161,21 +202,41 @@
               {{ hasPayload(detail.task.responsePayload) ? '已记录' : '未记录' }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="请求参数" :span="2">
+        </el-descriptions>
+
+        <el-divider content-position="left">调试信息</el-divider>
+        <el-collapse class="debug-collapse">
+          <el-collapse-item name="request">
+            <template #title>
+              <div class="collapse-title">
+                <span>请求参数</span>
+                <el-tag size="small" :type="hasPayload(detail.task.requestPayload) ? 'success' : 'info'">
+                  {{ hasPayload(detail.task.requestPayload) ? '已记录' : '未记录' }}
+                </el-tag>
+              </div>
+            </template>
             <div class="payload-header">
               <span>请求参数</span>
               <el-button link type="primary" @click="copyText(detail.task.requestPayload)">复制</el-button>
             </div>
             <pre class="payload-pre">{{ formatPayload(detail.task.requestPayload) }}</pre>
-          </el-descriptions-item>
-          <el-descriptions-item label="响应内容" :span="2">
+          </el-collapse-item>
+          <el-collapse-item name="response">
+            <template #title>
+              <div class="collapse-title">
+                <span>响应内容</span>
+                <el-tag size="small" :type="hasPayload(detail.task.responsePayload) ? 'success' : 'info'">
+                  {{ hasPayload(detail.task.responsePayload) ? '已记录' : '未记录' }}
+                </el-tag>
+              </div>
+            </template>
             <div class="payload-header">
               <span>响应内容</span>
               <el-button link type="primary" @click="copyText(detail.task.responsePayload)">复制</el-button>
             </div>
             <pre class="payload-pre">{{ formatPayload(detail.task.responsePayload) }}</pre>
-          </el-descriptions-item>
-        </el-descriptions>
+          </el-collapse-item>
+        </el-collapse>
       </template>
 
       <el-divider content-position="left">结果列表</el-divider>
@@ -456,6 +517,23 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.summary-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.summary-main {
+  color: #111827;
+  font-weight: 500;
+}
+
+.summary-sub {
+  color: #6b7280;
+  font-size: 12px;
+}
+
 .detail-header {
   display: flex;
   align-items: center;
@@ -468,6 +546,39 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.detail-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.overview-card {
+  padding: 14px 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.overview-label {
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.overview-value {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.overview-sub {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .payload-header {
@@ -487,11 +598,20 @@ onBeforeUnmount(() => {
   line-height: 1.6;
 }
 
-.trace-cell {
+.collapse-title {
   display: flex;
+  align-items: center;
   gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
+}
+
+.debug-collapse {
+  margin-bottom: 8px;
+}
+
+.text-block {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
 }
 
 .result-thumb {
@@ -499,5 +619,11 @@ onBeforeUnmount(() => {
   height: 56px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 992px) {
+  .detail-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>
